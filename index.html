@@ -24,7 +24,8 @@
   #game{position:relative;background:#000;overflow:hidden;--s:1px;transform-origin:center center;will-change:transform}
   canvas{display:block;width:100%;height:100%;image-rendering:pixelated;image-rendering:crisp-edges;-ms-interpolation-mode:nearest-neighbor}
   .hud{position:absolute;pointer-events:none;font-size:calc(var(--s)*7.4);line-height:1.25;letter-spacing:.02em;text-shadow:0 1px 0 #000,0 0 4px #000}
-  #top{top:calc(var(--s)*3);left:calc(var(--s)*4);right:calc(var(--s)*4);display:flex;gap:calc(var(--s)*3);align-items:flex-start;flex-wrap:wrap;max-height:calc(var(--s)*40);overflow:hidden}
+  #top{top:calc(var(--s)*3);left:calc(var(--s)*4);right:calc(var(--s)*4);display:flex;flex-direction:column;gap:calc(var(--s)*2);align-items:flex-start}
+  #top .chiprow{display:flex;gap:calc(var(--s)*3);align-items:center;flex-wrap:wrap}
   #bot{display:none}
   .chip{background:rgba(8,11,20,.72);border:1px solid #22304a;border-radius:calc(var(--s)*2);padding:calc(var(--s)*1.5) calc(var(--s)*3.5);white-space:nowrap}
   .val{color:#ffd86b}
@@ -114,9 +115,11 @@
     <canvas id="c" width="320" height="180"></canvas>
 
     <div class="hud" id="top">
-      <div class="chip"><span id="hDay">第 1 天</span>·<span id="hPhase">白天</span> <span id="hTime">200</span></div>
-      <div class="chip">💰<span class="val" id="hPurse">300</span> 库<span class="val" id="hVault">0</span></div>
-      <div class="chip">⭐<span class="pre" id="hPre">30</span> ⚡<span class="pw" id="hPower">0/10</span></div>
+      <div class="chiprow">
+        <div class="chip"><span id="hDay">第 1 天</span>·<span id="hPhase">白天</span> <span id="hTime">200</span></div>
+        <div class="chip">💰<span class="val" id="hPurse">300</span> 库<span class="val" id="hVault">0</span></div>
+        <div class="chip">⭐<span class="pre" id="hPre">30</span> ⚡<span class="pw" id="hPower">0/10</span></div>
+      </div>
       <div class="chip speedbar">
         <button class="btn on" data-sp="1">1×</button>
         <button class="btn" data-sp="2">2×</button>
@@ -377,13 +380,12 @@ function syncHUD(){
   el=$('hPre'); if(el) el.textContent=Math.floor(G.prestige);
   el=$('hPower'); if(el){ el.textContent=G.powerUse+'/'+G.powerCap; el.className = G.powerUse>G.powerCap ? 'pw warn' : 'pw'; }
   var sb=$('skipBtn');
-  if(sb) sb.style.display = (G.phase==='dusk')?'block':'none';
+  if(sb) sb.style.visibility = (G.phase==='dusk')?'visible':'hidden';
   var btns=document.querySelectorAll('[data-sp]');
   for(var i=0;i<btns.length;i++){
     var b=btns[i];
-    var on = (G.phase==='night') ? (b.dataset.sp==='1') : (parseInt(b.dataset.sp,10)===G.speed);
-    b.classList.toggle('on', !!on);
-    b.classList.toggle('off', G.phase==='night' && b.dataset.sp!=='1');
+    b.classList.toggle('on', parseInt(b.dataset.sp,10)===G.speed);
+    b.classList.remove('off');
   }
 }
 
@@ -425,15 +427,16 @@ function homeMenu(){
   var canUp = up && G.totalRevenue>=need.rev && G.prestige>=need.pres && G.purse>=cost;
   var h='<h3>家 · Lv'+G.homeLevel+'</h3>';
   h+='<div class="txt">金库 '+Math.floor(G.vault)+'（利息 2%/天） · 随身 '+Math.floor(G.purse)+'<br>电力 '+G.powerCap+' kW · 商店 '+countShops()+'/'+capShops()+' · 防御 '+countDefs()+'/'+capDefs()+' · 保安 '+G.fighters.length+'/'+capFighters()+'</div>';
+  if(up){
+    var sub2='营业额 '+Math.floor(G.totalRevenue)+'/'+need.rev+' · 威望 '+Math.floor(G.prestige)+'/'+need.pres+' · 电力 +'+(LV[G.homeLevel].power-G.powerCap)+'kW';
+    h+=row('⬆ 升级家 → Lv'+(G.homeLevel+1), sub2, (canUp?'<span style="color:#7ff0c4">可升级</span> ':'')+money(cost), !canUp, 'homeUp');
+  } else {
+    h+=row('已满级 Lv8','','','', 'none');
+  }
   h+=row('存入 100','随身 → 金库','',G.purse<100,'vaultIn100');
   h+=row('取出 100','金库 → 随身','',G.vault<100,'vaultOut100');
   h+=row('全部存入','','',G.purse<=0,'vaultInAll');
   h+=row('全部取出','','',G.vault<=0,'vaultOutAll');
-  if(up){
-    h+=row('升级家 → Lv'+(G.homeLevel+1),'需要 累计营业额 '+need.rev+' · 威望 '+need.pres,cost,!canUp,'homeUp');
-  } else {
-    h+=row('已满级 Lv8','','','', 'none');
-  }
   h+=row('布防 · 调度','设置每人夜里守左 / 守右 / 自动','',false,'deploy');
   h+=row('招募 近战保安', '血厚 · 伤害低','💰200',G.purse<200||G.fighters.length>=capFighters(),'hireMelee');
   h+=row('招募 远程保安', '血薄 · 伤害高'+(G.homeLevel<3?' · 需 Lv3':''),'💰450',G.purse<450||G.homeLevel<3||G.fighters.length>=capFighters(),'hireRanged');
@@ -968,6 +971,23 @@ function updateEnemies(dt){
     }
     var dir = e.x>0?-1:1;
     e.face=dir;
+    // 贴身保安：停下对打，不再绕过去砸店
+    var blk=null, bdist=1e9;
+    for(var fi=0;fi<G.fighters.length;fi++){
+      var ff=G.fighters[fi];
+      var df=Math.abs(ff.x-e.x);
+      if(df<17&&df<bdist){ bdist=df; blk=ff; }
+    }
+    if(blk){
+      e.face=blk.x>e.x?1:-1;
+      e.cd-=dt;
+      if(e.cd<=0){
+        e.cd=0.9;
+        blk.hp-=e.dmg*0.55;
+        addParts(blk.x+(blk.x>e.x?5:-5),GY-16,3,'#ff8f5a');
+      }
+      continue;
+    }
     var tgt=null, bestd=1e9;
     for(var j=0;j<slots.length;j++){
       var s=slots[j]; var st=s.st;
@@ -1133,13 +1153,6 @@ function updateFighters(dt){
       } else f.moving=0;
     }
     f.x=clamp(f.x,b.lo,b.hi);
-    for(var k=0;k<G.enemies.length;k++){
-      var en=G.enemies[k];
-      if(Math.abs(en.x-f.x)<9){
-        en.hitCd-=dt;
-        if(en.hitCd<=0){ en.hitCd=1.0; f.hp-=en.dmg; }
-      }
-    }
   }
 }
 
@@ -1167,11 +1180,13 @@ function updateTurrets(dt){
 function updateProjs(dt){
   for(var i=G.projs.length-1;i>=0;i--){
     var pr=G.projs[i];
+    var px0=pr.x;
     pr.x+=pr.vx*dt; pr.life-=dt;
+    var lo=Math.min(px0,pr.x)-6, hi=Math.max(px0,pr.x)+6;
     var hit=false;
     for(var j=0;j<G.enemies.length;j++){
       var e=G.enemies[j];
-      if(Math.abs(e.x-pr.x)<6){ e.hp-=pr.dmg; hit=true; addParts(pr.x,pr.y,2,'#ffd86b'); break; }
+      if(e.x>=lo&&e.x<=hi){ e.hp-=pr.dmg; hit=true; addParts(e.x,pr.y,3,'#ffd86b'); break; }
     }
     if(hit||pr.life<=0||Math.abs(pr.x)>620) G.projs.splice(i,1);
   }
@@ -1189,9 +1204,9 @@ function updatePhase(dt){
     G.t-=dt*G.speed;
     if(G.t<=0){ startNight(); }
   } else if(G.phase==='night'){
-    G.t-=dt;
+    G.t-=dt*G.speed;
     if(G.wavesLeft>0){
-      G.waveTimer-=dt;
+      G.waveTimer-=dt*G.speed;
       if(G.waveTimer<=0) spawnWave();
     }
     if(G.t<=0) endNight(false);
@@ -1374,7 +1389,6 @@ function installTouch(){
 }
 
 function setSpeed(s){
-  if(G.phase==='night') s=1;
   G.speed=s; syncHUD();
 }
 var spBtns=document.querySelectorAll('[data-sp]');
@@ -3463,14 +3477,14 @@ function loop(ts){
   if(dt>0.1) dt=0.1;
   if(!G.paused && !G.userPaused && G.started && !G.over){
     G.tick+=dt;
-    var sdt=dt*(G.phase==='night'?1:G.speed);
+    var sdt=dt*G.speed;
     updatePlayer(sdt);
     if(G.phase==='day'||G.phase==='dusk'||G.phase==='night') updateShops(sdt);
     updateCoins(sdt);
     if(G.phase==='night'){
-      updateEnemies(dt); updateTurrets(dt); updateProjs(dt);
+      updateEnemies(dt*G.speed); updateTurrets(dt*G.speed); updateProjs(dt*G.speed);
     }
-    updateFighters(dt);
+    updateFighters(dt*G.speed);
     if(G.flash>0) G.flash-=dt;
     for(var i=G.parts.length-1;i>=0;i--){
       var p=G.parts[i]; p.life-=dt; p.x+=p.vx*dt; p.y+=p.vy*dt; p.vy+=200*dt;

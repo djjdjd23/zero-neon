@@ -231,12 +231,13 @@ run('zhou task then join', () => {
   unpause();
 });
 
-run('night starts and locks speed', () => {
+run('night starts at 1x but can be sped up', () => {
   D.startNight();
   if (G.phase !== 'night') throw new Error('phase=' + G.phase);
-  if (G.speed !== 1) throw new Error('speed=' + G.speed);
+  if (G.speed !== 1) throw new Error('night should start at 1x, got ' + G.speed);
   D.setSpeed(4);
-  if (G.speed !== 1) throw new Error('night speed not locked');
+  if (G.speed !== 4) throw new Error('night speed not applied');
+  D.setSpeed(1);
 });
 
 run('night spawns waves', () => {
@@ -411,6 +412,21 @@ run('tap outside closes the panel', () => {
   w._fire('pointerdown', { clientX: 4, clientY: 4 });
   w._fire('click', { target: w, clientX: 4, clientY: 4 });
   if (D.menuOpen) throw new Error('panel still open');
+});
+
+run('enemies stop and trade blows with fighters', () => {
+  G.enemies.length = 0; G.fighters.length = 0;
+  G.phase = 'night'; G.speed = 1; G.over = false; unpause();
+  D.addFighter('melee');
+  const f = G.fighters[0];
+  f.x = 0; f.hp = 120; f.maxHp = 120; f.side = 'auto';
+  G.enemies.push({ type:'smasher', x: 12, hp: 400, maxHp: 400, dmg: 10, speed: 16, cd: 0, hitCd: 0, face: -1, stealT: 0 });
+  const e = G.enemies[0];
+  const fhp0 = f.hp, ehp0 = e.hp, ex0 = e.x;
+  secs(5);
+  if (!(f.hp < fhp0)) throw new Error('fighter took no damage (hp=' + f.hp + ')');
+  if (!(e.hp < ehp0)) throw new Error('enemy took no damage (hp=' + e.hp + ')');
+  if (Math.abs(e.x - ex0) > 6) throw new Error('enemy should stop to fight, moved ' + (e.x - ex0).toFixed(1));
 });
 
 run('fighters patrol instead of standing still', () => {
