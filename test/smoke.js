@@ -279,6 +279,7 @@ run('end night + settle + new day', () => {
 });
 
 run('player loses cash when hit, prestige drops', () => {
+  G.fighters.length = 0;   // 保安会抢先打死小偷，清空以保证玩家真的被撞到
   D.startNight();
   unpause();
   G.purse = 1000;
@@ -343,6 +344,7 @@ run('ruin rebuild path', () => {
 });
 
 run('prestige zero ends game', () => {
+  G.fighters.length = 0;
   G.over = false; G.prestige = 3; G.phase = 'day';
   unpause();
   // 閫氳繃鐪熷疄璺緞鎵ｅ▉鏈涳細璁╂晫浜烘墦鐜╁
@@ -441,6 +443,89 @@ run('fighters patrol instead of standing still', () => {
   secs(4);
   if (Math.abs(f.x - x0) < 2) throw new Error('fighter did not move (x=' + f.x.toFixed(1) + ')');
   const b = D.streetBounds ? D.streetBounds() : null;
+});
+
+
+sandbox.window.__NOTOAST__ = true;
+
+run('story unlocks per act and never alters gameplay', () => {
+  D.handleAct('restart'); if (D.menuOpen) D.closePanel();
+  G.started = true; G.paused = false;
+  G.day = 4; G.purse = 1000; G.totalRevenue = 500;
+  if (D.doorState() !== 0) throw new Error('door visible before 老周, state=' + D.doorState());
+  const snap = { day: G.day, purse: G.purse, rev: G.totalRevenue, pre: G.prestige };
+  G.zhouJoined = true;
+  D.storyCheck();
+  if (!G.storyOn.a1) throw new Error('act 1 not unlocked');
+  if (D.doorState() !== 1) throw new Error('door should be sealed, state=' + D.doorState());
+  D.storyPanel();
+  if (!D.menuOpen) throw new Error('story panel did not open');
+  D.closePanel();
+  if (G.day !== snap.day || G.purse !== snap.purse || G.totalRevenue !== snap.rev || G.prestige !== snap.pre) {
+    throw new Error('story panel changed gameplay state');
+  }
+});
+
+run('story panel lists five acts and four endings', () => {
+  D.storyPanel();
+  const html = D.panel.innerHTML;
+  if (html.indexOf('第一幕') < 0 || html.indexOf('第五幕') < 0) throw new Error('acts missing');
+  for (const e of ['A · 熄灯', 'B · 体面离场', 'C · 第七个雨夜', 'D · 清街']) {
+    if (html.indexOf(e) < 0) throw new Error('ending missing: ' + e);
+  }
+  D.closePanel();
+});
+
+run('center door opens only with 老周 + 阿霓 + 零号', () => {
+  G.joined.ni = true; D.storyCheck();
+  if (D.doorState() !== 2) throw new Error('expected dim door, got ' + D.doorState());
+  G.joined.zero = true; D.storyCheck();
+  if (D.doorState() !== 3) throw new Error('expected openable door, got ' + D.doorState());
+  D.endingA();
+  if (!G.endings.A) throw new Error('ending A not recorded');
+  if (D.doorState() !== 4) throw new Error('door should be shut after A, got ' + D.doorState());
+  if (!D.menuOpen) throw new Error('ending panel not shown');
+  D.closePanel();
+});
+
+run('recruitment chip shows name and live progress', () => {
+  G.kills = 12;
+  const t = D.npcChipText({ id: 'bao', name: '阿豹' }, '未出现');
+  if (t.indexOf('阿豹') < 0) throw new Error('no name in chip: ' + t);
+  if (t.indexOf('12/30') < 0) throw new Error('no progress in chip: ' + t);
+  D.storyCheck();
+  const el = sandbox.document.getElementById('npcChip');
+  if (!el.textContent || el.textContent.indexOf('招募') !== 0) throw new Error('chip not synced: ' + el.textContent);
+  if (!/ready|near|npcchip/.test(el.className)) throw new Error('chip class lost: ' + el.className);
+});
+
+run('npc panel lists all eight with conditions', () => {
+  D.npcPanel();
+  if (!D.menuOpen) throw new Error('npc panel not open');
+  const html = D.panel.innerHTML;
+  for (const n of ['老周', '阿豹', '老陈', '梅姐', '阿霓', '小雨', '小满', '零号']) {
+    if (html.indexOf(n) < 0) throw new Error('missing npc: ' + n);
+  }
+  if (html.indexOf('招募：') < 0) throw new Error('conditions missing');
+  D.closePanel();
+});
+
+run('act 4 spawns 陈晓 and the pact stays narrative', () => {
+  G.xiao = null; G.pact = null;
+  G.joined.man = true; G.homeLevel = 5;
+  D.storyCheck();
+  if (!G.storyOn.a4) throw new Error('act 4 not unlocked');
+  if (!G.xiao) throw new Error('陈晓 not spawned');
+  const purse0 = G.purse, rev0 = G.totalRevenue, day0 = G.day;
+  D.xiaoDialog();
+  if (!D.menuOpen) throw new Error('xiao dialog not open');
+  D.handleAct('pact:refuse');
+  if (D.menuOpen) D.closePanel();
+  if (G.pact !== 'refuse') throw new Error('pact=' + G.pact);
+  if (G.xiao) throw new Error('陈晓 should leave after the choice');
+  if (G.purse !== purse0 || G.totalRevenue !== rev0 || G.day !== day0) {
+    throw new Error('pact changed economy');
+  }
 });
 
 console.log(log.join('\n'));

@@ -33,6 +33,16 @@
   .pw{color:#7cc7ff}
   .warn{color:#ff6b6b}
   .speedbar{pointer-events:auto;display:flex;gap:calc(var(--s)*2);align-items:center}
+  #top .npcchip{pointer-events:auto;cursor:pointer;border-color:#31456a;color:#c3cee0;max-width:calc(var(--s)*150);overflow:hidden;text-overflow:ellipsis}
+  #top .npcchip.near{border-color:#3d6fae;color:#8fd3ff}
+  #top .npcchip.ready{border-color:#7ff0c4;color:#7ff0c4;animation:chipGlow 1.4s ease-in-out infinite}
+  @keyframes chipGlow{0%,100%{box-shadow:0 0 0 0 rgba(127,240,196,0)}50%{box-shadow:0 0 0 calc(var(--s)*1.6) rgba(127,240,196,.35)}}
+  #toast{position:absolute;z-index:40;left:50%;top:calc(var(--s)*47);transform:translate(-50%,-6px);
+    background:rgba(10,16,28,.92);border:1px solid #4a6288;border-left:calc(var(--s)*1.6) solid #ffd86b;
+    border-radius:calc(var(--s)*2);padding:calc(var(--s)*2) calc(var(--s)*4);font-size:calc(var(--s)*7);
+    pointer-events:none;opacity:0;transition:opacity .25s ease,transform .25s ease;white-space:nowrap;
+    text-shadow:0 1px 0 #000;box-shadow:0 0 calc(var(--s)*6) rgba(0,0,0,.7)}
+  #toast.show{opacity:1;transform:translate(-50%,0)}
   .btn{pointer-events:auto;font-family:inherit;font-size:calc(var(--s)*7.4);color:#cfd8ea;background:#151c2b;
     border:1px solid #2c3a55;border-radius:calc(var(--s)*2);padding:calc(var(--s)*2) calc(var(--s)*4);cursor:pointer}
   .btn:active{background:#243049}
@@ -94,7 +104,7 @@
   #game.rotated.alt{transform:translate(-50%,-50%) rotate(-90deg)}
   #flipBtn{display:none}
   #game.rotated #flipBtn{display:inline-block}
-  #obj{position:absolute;left:calc(var(--s)*4);top:calc(var(--s)*17);right:calc(var(--s)*4);
+  #obj{position:absolute;left:calc(var(--s)*4);top:calc(var(--s)*32);right:calc(var(--s)*4);
     pointer-events:none;font-size:calc(var(--s)*7);line-height:1.4}
   #obj .box{display:inline-block;max-width:100%;background:rgba(10,20,38,.86);border:1px solid #3d6fae;
     border-left:calc(var(--s)*1.6) solid #ffd86b;border-radius:calc(var(--s)*2);
@@ -119,18 +129,22 @@
         <div class="chip"><span id="hDay">第 1 天</span>·<span id="hPhase">白天</span> <span id="hTime">200</span></div>
         <div class="chip">💰<span class="val" id="hPurse">300</span> 库<span class="val" id="hVault">0</span></div>
         <div class="chip">⭐<span class="pre" id="hPre">30</span> ⚡<span class="pw" id="hPower">0/10</span></div>
+        <div class="chip npcchip" id="npcChip">招募 · —</div>
       </div>
       <div class="chip speedbar">
         <button class="btn on" data-sp="1">1×</button>
         <button class="btn" data-sp="2">2×</button>
         <button class="btn" data-sp="4">4×</button>
         <button class="btn" id="deployBtn">布防</button>
+        <button class="btn" id="storyBtn">街史</button>
         <button class="btn" id="pauseBtn">II</button>
         <button class="btn" id="skipBtn" style="display:none">跳过</button>
         <button class="btn" id="flipBtn">翻转</button>
         <button class="btn" id="helpBtn">?</button>
       </div>
     </div>
+
+    <div id="toast"></div>
 
     <div id="obj"><div class="box" id="objBox"><span id="objText"></span><span class="arrow" id="objArrow">◀</span></div></div>
 
@@ -208,6 +222,63 @@ var NPCS=[
   {id:'zero',name:'零号',role:'真相',color:'#8f8fa8',lv:6,npc:5,
    ability:'解锁真结局路径',task:'守过 40 天'}
 ];
+// ============================== 街史（剧情档案，纯叙事） ==============================
+// 只做记录与阅读，不改数值、不弹窗打断、不锁操作
+var STORY=[
+  {id:'a1', n:1, short:'第一幕', title:'这条街不对劲', when:'老周入队',
+   cond:function(){ return hasNpc('zhou'); },
+   lines:[
+     '老周把一张三十年前的施工图铺在五金店后院的水泥地上。',
+     '“看见这层电缆没有？下面还有一层。我封的。”',
+     '阿豹被制服那晚，说了句怪话：“你们这条街，是有人花钱让我们来的。”',
+     '——袭击不是随机的。'
+   ]},
+  {id:'a2', n:2, short:'第二幕', title:'钱从哪来', when:'阿豹与梅姐入队',
+   cond:function(){ return hasNpc('bao')&&hasNpc('mei'); },
+   lines:[
+     '阿豹交出一张排班表：谁几点来、从哪条巷子进、砸到几点收工。',
+     '梅姐翻开账本。付款方是「环城更新集团」，科目写着“环境整治服务费”。',
+     '一笔一笔，三十年前的日期也在上面。',
+     '——这是一场持续了三十年的清街行动。'
+   ]},
+  {id:'a3', n:3, short:'第三幕', title:'零号是谁', when:'阿霓、小雨、老陈入队',
+   cond:function(){ return hasNpc('ni')&&hasNpc('yu')&&hasNpc('chen'); },
+   lines:[
+     '小雨拿出父亲的笔记：中枢需要一个人形接口——不能离开范围，不能睡觉，不能说话。',
+     '老陈盯着监控里清街队队长的脸，很久才说：“那是陈晓。我女儿。”',
+     '阿霓找到三十年前的录像：中枢启动那晚，一个年轻人走进地下，再没出来。',
+     '——零号不是怪物。是一个被困在指令里的人。'
+   ]},
+  {id:'a4', n:4, short:'第四幕', title:'代价', when:'小满入队 + 家 Lv5',
+   cond:function(){ return hasNpc('man')&&G.homeLevel>=5; },
+   lines:[
+     '小满把整条街的监控剪成一条视频，播放量破了千万。',
+     '舆论倒向街区。环城更新也加快了动作。',
+     '第二天黄昏，陈晓一个人来了，没带人。她说可以谈。',
+     '——她站在街上等你。走过去才会开始。'
+   ]},
+  {id:'a5', n:5, short:'第五幕', title:'第七个雨夜', when:'零号入队',
+   cond:function(){ return hasNpc('zero'); },
+   lines:[
+     '雨夜。零号第一次开口。',
+     '“我不是守这条街。我是被这条街养着的。你们一关灯，我就少一点。”',
+     '“三十年了，只有你没关过灯。”',
+     '他带你下到电缆层最深处。中枢还在转，靠的是街面上每一盏灯、每一台冰柜、每一座炮塔。'
+   ]}
+];
+var ENDINGS=[
+  {id:'A', name:'A · 熄灯', kind:'主动', when:'老周 + 阿霓 + 零号在队后，走到中枢门前自愿交出',
+   text:'零号终于可以停下来了。街恢复“正常”，公司撤走。你再也没见过他。'},
+  {id:'B', name:'B · 体面离场', kind:'签约', when:'第四幕在陈晓那里签字',
+   text:'你拿钱走人。街被推平，盖起商场。某天你在新店门口，看见一个湿透的流浪汉站着看你。'},
+  {id:'C', name:'C · 第七个雨夜', kind:'真结局', when:'八人全部在队 + 守过 50 天 + 没有签字',
+   text:'中枢重启，整条街的灯连成一片。零号第一次走到地面，说出了一句完整的名字——他的。'},
+  {id:'D', name:'D · 清街', kind:'失败', when:'威望归零',
+   text:'街被彻底清空。最后一夜，你在卷帘门上看见自己的影子。'}
+];
+function storyById(id){ for(var i=0;i<STORY.length;i++) if(STORY[i].id===id) return STORY[i]; return null; }
+function endingById(id){ for(var i=0;i<ENDINGS.length;i++) if(ENDINGS[i].id===id) return ENDINGS[i]; return null; }
+
 var CFG={};
 (function(){var k;for(k in SHOPS)CFG[k]=SHOPS[k];for(k in DEFS)CFG[k]=DEFS[k];})();
 var isShop=function(k){return !!SHOPS[k];};
@@ -315,6 +386,7 @@ function reset(){
     fighters:[], enemies:[], customers:[], gcoins:[], parts:[], projs:[],
     order:null, zhou:null, zhouJoined:false, zhouTask:false,
     street:[], joined:{}, npcDay:{}, loan:0, deployOpened:false, userPaused:false,
+    storyOn:{}, storyRead:{}, endings:{}, pact:null, xiao:null, lightsOut:false,
     drops:0, defsBuilt:0, destroyedNight:0, waveTimer:0, wavesLeft:0, waveGap:22,
     longDay:false, kills:0, staff:0, rain:false, flash:0,
     settle:null, over:false, started:false, story:0, nightDestroyed:0,
@@ -324,6 +396,8 @@ function reset(){
   for(var k0 in G) delete G[k0];
   for(var k1 in NG) G[k1]=NG[k1];
   for(var i=0;i<slots.length;i++) slots[i].st=null;
+  lastNpcChip='';
+  var tel=$('toast'); if(tel) tel.classList.remove('show');
   syncHUD();
   if(window.__syncPauseBtn) window.__syncPauseBtn();
 }
@@ -387,6 +461,7 @@ function syncHUD(){
     b.classList.toggle('on', parseInt(b.dataset.sp,10)===G.speed);
     b.classList.remove('off');
   }
+  syncNpcChip();
 }
 
 // ============================== 菜单 ==============================
@@ -586,6 +661,13 @@ function handleAct(act){
   if(a==='sellDrops'){ G.purse+=G.drops*25; addParts(G.player.x,GY-20,8,'#b79bff'); G.drops=0; syncHUD(); closePanel(); return; }
   if(a==='zhouTalk'){ zhouDialog(); return; }
   if(a==='help'){ helpPanel(); return; }
+  if(a==='story'){ storyPanel(); return; }
+  if(a==='storyPanel'){ storyPanel(); return; }
+  if(a==='storyRead'){ storyRead(v); return; }
+  if(a==='npcList'){ npcPanel(); return; }
+  if(a==='pact'){ doPact(v); return; }
+  if(a==='endingA'){ endingA(); return; }
+  if(a==='endingBack'){ closePanel(); return; }
   if(a==='skipTut'){ tutActive=false; lastObj=''; closePanel(); syncObjective(); return; }
   if(a==='settleGo'){ closePanel(); newDay(); return; }
   if(a==='restart'){ closePanel(); reset(); G.started=true; return; }
@@ -694,6 +776,7 @@ function checkNpcSpawns(){
   }
 }
 function npcTaskDone(n){
+  if(n.id==='zhou') return countDefs()>=3;
   if(n.id==='bao') return G.kills>=30;
   if(n.id==='chen') return G.kills>=60;
   if(n.id==='mei') return G.loan<=0&&G.vault>=30000;
@@ -739,6 +822,287 @@ function joinNpc(id){
   G.flash=0.2;
 }
 function checkNpcTasks(){}
+
+// ============================== 街史（运行时） ==============================
+var toastTimer=null;
+function showToast(txt,color){
+  if(typeof window!=='undefined' && window.__NOTOAST__) return;
+  var el=$('toast'); if(!el) return;
+  el.innerHTML=txt;
+  el.style.color=color||'#ffd86b';
+  el.classList.add('show');
+  if(toastTimer) clearTimeout(toastTimer);
+  toastTimer=setTimeout(function(){ el.classList.remove('show'); }, 5600);
+}
+function storyUnlocked(id){ return !!(G.storyOn&&G.storyOn[id]); }
+function storyCheck(){
+  if(!G.storyOn) G.storyOn={};
+  for(var i=0;i<STORY.length;i++){
+    var s=STORY[i];
+    if(G.storyOn[s.id]) continue;
+    var ok=false;
+    try{ ok=!!s.cond(); }catch(e){ ok=false; }
+    if(!ok) continue;
+    G.storyOn[s.id]=true;
+    showToast('街史 · '+s.short+'《'+s.title+'》已解锁','#ffd86b');
+    if(s.id==='a4'&&!G.pact&&!G.xiao) G.xiao={x:64};
+  }
+  if(!G.endings) G.endings={};
+  if(!G.endings.C && joinedCount()>=8 && G.day>=50 && G.pact!=='sign'){
+    G.endings.C=true;
+    showToast('真结局条件已达成 · 第七个雨夜','#7ff0c4');
+  }
+  if(G.prestige<=0) G.endings.D=true;
+}
+function storyPanel(){
+  var got=0,i;
+  for(i=0;i<STORY.length;i++) if(storyUnlocked(STORY[i].id)) got++;
+  var h='<h3>清河街 · 街史</h3>';
+  h+='<div class="txt" style="color:#8fd3ff">已解锁 '+got+'/'+STORY.length+' 幕 · 剧情只是补充，不看也能照常经营</div>';
+  for(i=0;i<STORY.length;i++){
+    var s=STORY[i];
+    if(storyUnlocked(s.id)){
+      h+='<div class="row" data-act="storyRead:'+s.id+'"><div class="l"><span>'+s.short+' · '+s.title+'</span>'+
+         '<span class="sub">'+(G.storyRead&&G.storyRead[s.id]?'已读':'未读')+' · 点击阅读</span></div><div class="r">▸</div></div>';
+    } else {
+      h+='<div class="row dis"><div class="l"><span>'+s.short+' · ？？？</span>'+
+         '<span class="sub">解锁条件：'+s.when+'</span></div><div class="r">锁</div></div>';
+    }
+  }
+  h+='<div class="txt" style="color:#8fd3ff;margin-top:4px">结局档案</div>';
+  for(i=0;i<ENDINGS.length;i++){
+    var e=ENDINGS[i], on=!!(G.endings&&G.endings[e.id]);
+    h+='<div class="row'+(on?'':' dis')+'"><div class="l"><span>'+e.name+'　<span style="color:#7f8da8">'+e.kind+'</span></span>'+
+       '<span class="sub">'+(on?'已记录 · '+e.text:'条件：'+e.when)+'</span></div><div class="r">'+(on?'已达成':'…')+'</div></div>';
+  }
+  h+=foot(); openPanel(h);
+}
+function storyRead(id){
+  var s=storyById(id); if(!s) return;
+  if(!G.storyRead) G.storyRead={};
+  G.storyRead[id]=true;
+  var h='<h3>'+s.short+' · '+s.title+'</h3>';
+  for(var i=0;i<s.lines.length;i++) h+='<div class="txt">'+s.lines[i]+'</div>';
+  h+='<div class="foot"><button class="btn" data-act="storyPanel">返回街史</button><button class="btn" data-act="close">关闭</button></div>';
+  openPanel(h);
+}
+// 每晚结算底部一行小字（随进度变化，不占操作）
+function settleLine(){
+  if(G.pact==='sign') return '你已经在协议上签了字。街面上的灯还亮着，但已经不是你的了。';
+  if(G.pact==='refuse') return '拒绝的那晚，街坊把卷帘门一扇扇拉下来，声音很整齐。';
+  if(hasNpc('zero')) return '雨停之前，地下那层总是先安静下来。';
+  if(hasNpc('zhou')) return '老周说，这条街的骨头比他想的硬。';
+  return '街口的霓虹有一半是坏的，剩下那一半还在闪。';
+}
+
+// ============================== 第四幕 · 陈晓 ==============================
+function xiaoAlive(){ return !!(G.xiao&&!G.pact&&G.phase!=='night'); }
+function xiaoDialog(){
+  if(G.pact){ dialogBox('陈晓',['“字已经签了。”她没再看你。'],'close'); return; }
+  var h='<h3>陈晓 · 清街队队长</h3>';
+  h+='<div class="txt">“我爸在这条街上。”她把手插在口袋里，眼睛看着别处。</div>';
+  h+='<div class="txt">“签了，补偿是市价的三倍，我保证没人再来砸。不签——”她顿了一下，“下周就不是我来了。”</div>';
+  h+='<div class="txt" style="color:#7f8da8">剧情选择，只写进档案，不改经营数值。</div>';
+  h+='<div class="foot"><button class="btn" data-act="pact:sign">签下协议</button><button class="btn" data-act="pact:refuse">拒绝</button></div>';
+  openPanel(h);
+}
+function doPact(kind){
+  G.pact=kind; G.xiao=null;
+  if(kind==='sign'){
+    G.endings.B=true;
+    dialogBox('签下了',['你签了字。她把文件收进包里，走的时候没有回头。','街暂时安静了。','（档案：结局 B 的线已经埋下）'],'close','收起');
+  } else {
+    prestige(20);
+    dialogBox('拒绝了',['“行。”她点点头，像是松了一口气，又像是更累了。','街坊那晚把灯都开到了最亮。','威望 +20'],'close','收起');
+  }
+}
+
+// ============================== 中枢门（结局 A） ==============================
+var DOOR_X=40;
+function doorState(){
+  if(!hasNpc('zhou')) return 0;
+  if(!hasNpc('ni')) return 1;
+  if(!hasNpc('zero')) return 2;
+  if(G.lightsOut) return 4;
+  return 3;
+}
+function drawCenterDoor(){
+  var d=doorState();
+  if(d===0) return;
+  var x=DOOR_X;
+  // 地面开口
+  R(x-16,GY-2,32,3,'#070b12');
+  R(x-15,GY-2,30,1,'#3a4d6e');
+  // 向下三级台阶
+  R(x-12,GY+1,24,2,'#2a3852');
+  R(x-12,GY+1,24,1,'#46608a');
+  R(x-9,GY+3,18,2,'#243149');
+  R(x-9,GY+3,18,1,'#3a4d6e');
+  R(x-6,GY+5,12,2,'#1c2739');
+  R(x-6,GY+5,12,1,'#31456a');
+  // 门洞 + 门框
+  var gx=x-13, gy=GY+7, gw=26, gh=23;
+  R(gx-3,gy-3,gw+6,gh+6,'#04060c');
+  R(gx-2,gy-2,gw+4,gh+4,d===4?'#101827':'#3a4d6e');
+  R(gx-1,gy-1,gw+2,gh+2,d===4?'#0b111b':'#243149');
+  R(gx,gy,gw,gh,d===4?'#080b11':'#26324a');
+  var mid=gx+Math.floor(gw/2);
+  // 两扇门板（比门框亮，能看出是门）
+  R(gx+1,gy+1,mid-gx-2,gh-2,d===4?'#0b1018':'#33425c');
+  R(mid+1,gy+1,gx+gw-mid-2,gh-2,d===4?'#0b1018':'#2c3a52');
+  // 横向加强条
+  for(var r=0;r<3;r++){
+    var ry=gy+5+r*6;
+    R(gx+2,ry,mid-gx-3,1,d===4?'#111827':'#4a6288');
+    R(mid+2,ry,gx+gw-mid-3,1,d===4?'#111827':'#41587a');
+  }
+  // 竖向纹理
+  R(gx+4,gy+2,1,gh-4,d===4?'#0e1420':'#3d5070');
+  R(gx+gw-5,gy+2,1,gh-4,d===4?'#0e1420':'#37496a');
+  // 中缝
+  R(mid-1,gy+1,2,gh-2,d===4?'#0b1119':(d>=2?'#2a6a7a':'#121a28'));
+  if(d===3){
+    R(mid-1,gy+2,2,gh-4,'#7bfff0');
+    A(mid-1,gy+3,2,gh-6,'#ffffff',0.55);
+    glow(x,gy+Math.floor(gh/2),15,'#3ee9ff',0.24);
+  } else if(d===2){
+    A(mid-1,gy+3,2,gh-6,'#7bfff0',0.30);
+    glow(x,gy+Math.floor(gh/2),10,'#3ee9ff',0.10);
+  }
+  // 把手
+  if(d!==4){
+    R(mid-3,gy+Math.floor(gh/2),2,3,'#a8b8cc');
+    R(mid+1,gy+Math.floor(gh/2),2,3,'#a8b8cc');
+  }
+  // 顶部灯罩 + 指示灯
+  var lit = d===3? (Math.sin(G.tick*4)>-0.2) : (d===2?(Math.sin(G.tick*2)>0.4):false);
+  var lc = d===3?'#7ff0c4':(d===2?'#ffc857':'#3a2430');
+  R(x-5,gy-5,10,3,'#0a0f18');
+  R(x-4,gy-4,3,1,lit?lc:'#20303f');
+  R(x+1,gy-4,3,1,lit?lc:'#20303f');
+  if(lit) glow(x,gy-4,11,lc,0.20);
+  // 底部警示条
+  R(gx,gy+gh-3,gw,3,d===4?'#0c1119':'#2a2014');
+  for(var w=0;w<6;w++) A(gx+2+w*4,gy+gh-3,2,3,d===4?'#121927':'#c9a24a',0.9);
+}
+
+function centerDoorDialog(){
+  var d=doorState();
+  if(d<3){
+    dialogBox('封死的检修门',[
+      '门缝里没有一点声音，只有凉气。',
+      d===1?'（老周说，这扇门下面还有一层。）':'（阿霓能读出中枢的日志，但还差一个人愿意开口。）'
+    ],'close');
+    return;
+  }
+  var h='<h3>中枢门</h3>';
+  h+='<div class="txt">门后是还在运转的东西。三十年了，靠这条街面上每一盏灯养着。</div>';
+  h+='<div class="txt" style="color:#7f8da8">你可以什么都不做，转身走开。门不会催你。</div>';
+  h+='<div class="foot"><button class="btn" data-act="endingA">[ 交出中枢 ]</button><button class="btn" data-act="close">走开</button></div>';
+  openPanel(h);
+}
+function endingA(){
+  G.lightsOut=true;
+  if(!G.endings) G.endings={};
+  G.endings.A=true;
+  var h='<h3 style="color:#ffd86b">结局 A · 熄灯</h3>';
+  h+='<div class="txt">你按了下去。</div>';
+  h+='<div class="txt">街面的灯一盏一盏灭下去，从街尾灭到街口。地下那层嗡嗡的声音停了。</div>';
+  h+='<div class="txt">零号站在黑暗里，很轻地说了一句谢谢。然后什么都没有了。</div>';
+  h+='<div class="txt" style="color:#7f8da8">这条街恢复了“正常”。公司撤走了。你再也没见过他。</div>';
+  h+='<div class="txt" style="color:#7f8da8">（结局已写入档案，游戏可以继续。）</div>';
+  h+='<div class="foot"><button class="btn" data-act="endingBack">回到街上</button><button class="btn" data-act="restart">重新开始</button></div>';
+  openPanel(h);
+}
+
+// ============================== NPC 招募条件（横栏 + 面板） ==============================
+function npcState(n){
+  if(hasNpc(n.id)) return '已入队';
+  if(n.id==='zhou'){
+    if(!G.zhou && G.day<4) return '未出现';
+    if(countDefs()>=3) return '可入队';
+    return '在街上';
+  }
+  var on=false, arr=G.street||[];
+  for(var i=0;i<arr.length;i++) if(arr[i].id===n.id) on=true;
+  if(on) return npcTaskDone(n)?'可入队':'在街上';
+  return npcMet(n)?'在路上':'未出现';
+}
+function kfmt(v){ return v>=1000?(Math.floor(v/100)/10)+'k':(''+Math.floor(v)); }
+function npcFront(n){
+  if(n.day && G.day<n.day) return '第 '+n.day+' 天';
+  if(n.lv && G.homeLevel<n.lv) return '家 Lv'+n.lv;
+  if(n.npc && joinedCount()<n.npc) return '先入队 '+n.npc+' 人';
+  if(n.pawnLv && !hasShopKind('pawn',n.pawnLv)) return '需当铺 Lv'+n.pawnLv;
+  if(n.need && !hasShopKind(n.need,n.needLv)) return '需'+SHOPS[n.need].name+' Lv'+(n.needLv||1);
+  if(n.rev && G.totalRevenue<n.rev) return '营收 '+kfmt(G.totalRevenue)+'/'+kfmt(n.rev);
+  return null;
+}
+function npcCondText(n){
+  if(n.id==='zhou') return '建成 3 座防御（'+Math.min(3,countDefs())+'/3）';
+  if(n.id==='bao') return '累计击杀 30（'+Math.min(30,G.kills)+'/30）';
+  if(n.id==='chen') return '累计击杀 60（'+Math.min(60,G.kills)+'/60）';
+  if(n.id==='mei') return '当铺 Lv2 · 存款 3 万（'+kfmt(G.vault)+'）';
+  if(n.id==='ni') return '网吧 + 营业额 2 万（'+kfmt(G.totalRevenue)+'）';
+  if(n.id==='yu') return '药房 Lv2 · 4 天无阵亡';
+  if(n.id==='man') return '饭馆 Lv2 · 日营收 5 千';
+  if(n.id==='zero') return '家 Lv6 · 已入队 5 人（'+joinedCount()+'）';
+  return '';
+}
+function npcChipText(n,st){
+  if(st==='可入队') return '招募 · '+n.name+' 可入队';
+  var fr=npcFront(n);
+  if(fr) return '招募 · '+n.name+' '+fr;
+  if(n.id==='zhou') return '招募 · 老周 防御 '+Math.min(3,countDefs())+'/3';
+  if(n.id==='bao') return '招募 · 阿豹 击杀 '+Math.min(30,G.kills)+'/30';
+  if(n.id==='chen') return '招募 · 老陈 击杀 '+Math.min(60,G.kills)+'/60';
+  if(n.id==='mei') return '招募 · 梅姐 存款 '+kfmt(G.vault)+'/30k';
+  if(n.id==='ni') return '招募 · 阿霓 营收 '+kfmt(G.totalRevenue)+'/20k';
+  if(n.id==='yu') return '招募 · 小雨 药房 Lv2';
+  if(n.id==='man') return '招募 · 小满 饭馆 Lv2';
+  if(n.id==='zero') return '招募 · 零号 Lv6 五人';
+  return '招募 · '+n.name;
+}
+var lastNpcChip='';
+function syncNpcChip(){
+  var el=$('npcChip'); if(!el) return;
+  var ready=[], rest=[], i, n, st;
+  for(i=0;i<NPCS.length;i++){
+    n=NPCS[i];
+    if(hasNpc(n.id)) continue;
+    st=npcState(n);
+    if(st==='可入队') ready.push({n:n,st:st});
+    else rest.push({n:n,st:st});
+  }
+  var pick=null, txt='招募 · 全员在队', cls='chip npcchip';
+  if(ready.length){
+    pick=ready[0]; txt=npcChipText(pick.n,'可入队'); cls+=' ready';
+  } else if(rest.length){
+    var idx=Math.floor(Date.now()/4600)%rest.length;
+    pick=rest[idx]; txt=npcChipText(pick.n,pick.st);
+    if(pick.st==='在街上') cls+=' near';
+  } else {
+    cls+=' ready';
+  }
+  if(txt===lastNpcChip && el.className===cls) return;
+  lastNpcChip=txt;
+  el.textContent=txt;
+  el.className=cls;
+}
+function npcPanel(){
+  var h='<h3>特殊 NPC · 招募条件</h3>';
+  h+='<div class="txt" style="color:#8fd3ff">已入队 '+joinedCount()+'/8 · 走到街上的人身边按 E 对话</div>';
+  for(var i=0;i<NPCS.length;i++){
+    var n=NPCS[i], st=npcState(n), have=hasNpc(n.id);
+    var col=have?'#7ff0c4':(st==='可入队'?'#ffd86b':(st==='在街上'?'#8fd3ff':'#c3cee0'));
+    h+='<div class="row'+(have?' dis':'')+'"><div class="l"><span style="color:'+col+'">'+n.name+' · '+n.role+'　'+st+'</span>'+
+       '<span class="sub">'+(npcFront(n)?('出现：'+npcFront(n)+'<br>'):'')+'招募：'+npcCondText(n)+'<br>能力：'+n.ability+'</span></div>'+
+       '<div class="r">'+(have?'✔':'')+'</div></div>';
+  }
+  h+='<div class="txt" style="color:#7f8da8">入队条件只看账本，不看剧情；剧情解锁进度在「街史」里。</div>';
+  h+=foot(); openPanel(h);
+}
+
 function dmgMul(type){
   var m=1;
   if(hasNpc('chen')) m*=1.25;
@@ -795,6 +1159,8 @@ function nearestInteract(){
   cand(-52,{t:'hardware'},26);
   if(G.zhou && !G.zhouJoined) cand(-36,{t:'zhou'},18);
   if(G.street) for(var n1=0;n1<G.street.length;n1++) cand(G.street[n1].x,{t:'npc',npc:G.street[n1]},16);
+  if(xiaoAlive()) cand(G.xiao.x,{t:'xiao'},16);
+  if(doorState()>0) cand(DOOR_X,{t:'door'},16);
   for(var i=0;i<slots.length;i++){
     var s=slots[i];
     if(s.st) cand(s.x,{t:'shop',st:s.st},20);
@@ -809,6 +1175,8 @@ function doInteract(){
   if(!it) return;
   if(it.t==='zhou'){ zhouDialog(); return; }
   if(it.t==='npc'){ npcDialogOnStreet(it.npc); return; }
+  if(it.t==='xiao'){ xiaoDialog(); return; }
+  if(it.t==='door'){ centerDoorDialog(); return; }
   if(it.t==='home'){ homeMenu(); return; }
   if(it.t==='hardware'){ hardwareMenu(); return; }
   if(it.t==='shop'){ shopMenu(it.st); return; }
@@ -1230,6 +1598,7 @@ function endNight(homeLost){
   var h='<h3>'+(homeLost?'家被攻破了':'第 '+G.day+' 天 · 结算')+'</h3>';
   h+='<div class="txt">今日营业额 '+G.dayRevenue+' / 目标 '+G.dayTarget+'<br>工资 -'+salary+' · 金库利息 +'+interest+'<br>声望 +'+pre+(G.nightDestroyed?' · 被毁建筑 '+G.nightDestroyed:'')+'</div>';
   if(homeLost) h+='<div class="txt" style="color:#ff6b6b">小金库损失 40%，家降 1 级，威望 -40。<br>明天白天延长到 260 秒，好好恢复。</div>';
+  h+='<div class="txt" style="color:#5c6b85;font-size:0.92em;margin-top:2px">'+settleLine()+'</div>';
   h+='<div class="foot"><button class="btn" data-act="settleGo">继续</button></div>';
   openPanel(h);
 }
@@ -1408,6 +1777,10 @@ if(pBtn) pBtn.addEventListener('click',function(){
 });
 var dBtn=$('deployBtn');
 if(dBtn) dBtn.addEventListener('click',function(){ deployPanel(); });
+var sBtn=$('storyBtn');
+if(sBtn) sBtn.addEventListener('click',function(){ storyPanel(); });
+var nChip=$('npcChip');
+if(nChip) nChip.addEventListener('click',function(){ npcPanel(); });
 window.__syncPauseBtn=function(){ G.userPaused=false; syncPauseBtn(); };
 $('helpBtn').addEventListener('click',function(){ helpPanel(); });
 $('flipBtn').addEventListener('click',function(){
@@ -1616,13 +1989,15 @@ function helpPanel(){
   var h='<h3>怎么玩</h3>';
   h+='<div class="txt" style="color:#8fd3ff">一句话：白天赚钱，夜里守街。你打不了人，只能跑。</div>';
   h+='<div class="txt"><b>1. 建造</b><br>走到左边<b>五金店</b>按 E → 选商店或防御（付钱下单）→ 走到街上<b>闪烁的空位</b>按 E → 五金店派施工队来建。<br>商店 25 秒，防御 10 秒。施工中工地会被砸。</div>';
-  h+='<div class="txt"><b>2. 收钱</b><br>商店卖出东西会掉金币在地上，<b>必须走过去捡</b>。捡到的钱是「随身现金」，被敌人碰到会掉 15%。</div>';
-  h+='<div class="txt"><b>3. 补货</b><br>每家店每天有固定库存，卖光后招牌冒<span style="color:#ff6b6b">红点</span>、停止赚钱。走过去按 E 触发补货（5～12 秒补满）。</div>';
-  h+='<div class="txt"><b>4. 家</b><br>走到中间的<b>家</b>按 E：<br>· 存钱/取钱（金库有利息 2%/天，但被攻破会损失 40%）<br>· 升级家（电力、商店上限、防御上限、保安上限）<br>· 招募员工（提升该店收入 35%）<br>· 招募保安（近战 / 远程 / 机器人）</div>';
+  h+='<div class="txt"><b>2. 收钱</b><br>商店卖出的钱记在<b>店头</b>（屋顶有金额牌），<b>走近就自动收进钱包</b>，不用捡。</div>';
+  h+='<div class="txt"><b>3. 补货</b><br>每家店每天有固定库存，卖光后屋顶冒<span style="color:#ff6b6b">红色感叹号</span>、停止赚钱。走过去按 E 触发补货（5～12 秒补满）。</div>';
+  h+='<div class="txt"><b>4. 家</b><br>走到中间的<b>家</b>按 E：<br>· <b>升级家</b>（菜单第一行：电力、商店/防御/保安上限）<br>· 存钱/取钱（金库利息 2%/天，被攻破损失 40%）<br>· 布防（设置每人守左 / 守右 / 自动）<br>· 招募保安（近战 / 远程 / 机器人）<br>· 店员要在<b>对应的店里</b>按 E 招募，家里招不了</div>';
+  h+='<div class="txt"><b>4.5 特殊 NPC</b><br>横栏上的<b>「招募 · …」</b>会轮播下一位 NPC 的<b>招募条件与进度</b>，点它可以看全部八位。条件达成后街上会出现这个人，走过去按 E 让他入队。</div>';
   h+='<div class="txt"><b>5. 电力</b><br>每天固定额度，<b>06:00 重置</b>。所有商店和防御都吃电，员工和保安不吃。超了会自动断掉后建的建筑（地下电缆会变红）。升级家 = 更多电力。</div>';
-  h+='<div class="txt"><b>6. 夜晚</b><br>敌人从街两端进来砸店。<b>你只能跑</b>：<br>· 站到某段附近，那段保安伤害 +20%<br>· 敌人碰你会抢走随身现金<br>· 建筑被砸 → 掉威望 + 店员逃走 + 要重建<br>· 家被砸 → 金库 -40%、降 1 级、当晚结束、次日白天 260 秒</div>';
+  h+='<div class="txt"><b>6. 夜晚</b><br>敌人从街两端进来砸店。<b>你只能跑</b>：<br>· 保安会迎上去和敌人互殴，敌人被贴身就停下对打<br>· 站到某段附近，那段保安伤害 +20%<br>· 敌人碰你会抢走随身现金<br>· 家被砸 → 金库 -40%、降 1 级、当晚结束、次日白天 260 秒</div>';
   h+='<div class="txt"><b>7. 输赢</b><br><b>唯一失败条件：威望归零。</b>建造和升级涨威望，被砸和被打掉威望。钱能赚回来，威望要好几天的正常营业才修得回来。</div>';
-  h+='<div class="txt" style="color:#ffd86b"><b>时间</b><br>白天 200 秒（1×/2×/4×可加速）→ 黄昏 45 秒（可跳过）→ 夜晚 150 秒（<b>锁 1×，不能加速</b>）。</div>';
+  h+='<div class="txt" style="color:#ffd86b"><b>时间</b><br>白天 200 秒 → 黄昏 45 秒（可跳过）→ 夜晚 150 秒。三段都可以 1×/2×/4× 加速。</div>';
+  h+='<div class="txt" style="color:#8fd3ff"><b>街史（剧情）</b><br>右上「街史」是这条街的剧情档案：<b>五幕 + 四个结局</b>。它<b>只是补充</b>，不看也能照常经营；不看不会少赚一分钱，也不会影响胜负。结局 A 要你自己走到中枢门前才会发生。</div>';
   h+='<div class="foot"><button class="btn" data-act="close">知道了</button>'+(tutActive?'<button class="btn" data-act="skipTut">跳过教程</button>':'')+'</div>';
   openPanel(h);
 }
@@ -3006,6 +3381,8 @@ function drawPrompt(){
   if(it.t==='home') x=0;
   else if(it.t==='hardware') x=-54;
   else if(it.t==='zhou') x=-36;
+  else if(it.t==='xiao') x=G.xiao.x;
+  else if(it.t==='door') x=DOOR_X;
   else if(it.t==='shop') x=it.st.x;
   else if(it.t==='slot') x=it.slot.x;
   var y=GY-44;
@@ -3013,6 +3390,8 @@ function drawPrompt(){
   else if(it.t==='hardware'){ y=GY-62-14; }
   else if(it.t==='shop'){ y=GY-(SHOP_ART[it.st.kind].h0+(it.st.level-1)*7)-36; }
   else if(it.t==='zhou'){ y=GY-50; }
+  else if(it.t==='xiao'){ y=GY-46; }
+  else if(it.t==='door'){ y=GY-26; }
   var bob=Math.round(Math.sin(G.tick*2.4)*1.5);
   A(x-7,y+bob,14,12,'#3ee9ff',0.10);
   R(x-6,y+bob,12,10,'#070b12');
@@ -3237,6 +3616,30 @@ function drawNpc(id,x,y,opt){
   }
 }
 
+
+// 第四幕：陈晓（只在白天/黄昏出现，站在街口）
+function drawXiao(){
+  if(!xiaoAlive()) return;
+  var x=G.xiao.x, y=GY;
+  drawHuman({x:x,y:y,face:1,walk:0,bob:Math.round(Math.sin(G.tick*1.5)*0.6),
+    coat:'#2b3346',coatD:'#1a2030',coatL:'#46536e',pants:'#1a2030',boots:'#0a0e16',
+    hair:'#1f1a24',hat:'cap',hatC:'#2b3346',hatL:'#46536e',mask:'none',neon:'#ff6b6b',rimA:0.18,
+    prop:'gun'});
+  // 马尾（从帽子后面垂下来）
+  R(x-8,y-33,2,7,'#1f1a24');
+  R(x-7,y-27,2,4,'#191520');
+  R(x-8,y-33,2,1,'#2e2634');
+  // 耳麦与肩章
+  R(x+4,y-31,1,2,'#ff6b6b');
+  R(x-7,y-25,3,1,'#c9b06a');
+  R(x+4,y-25,3,1,'#c9b06a');
+  // 头顶的可交谈标记
+  var mb=Math.round(Math.sin(G.tick*2.2)*1.5);
+  R(x-1,y-46+mb,2,4,'#ff9f6b');
+  R(x-1,y-40+mb,2,2,'#ff9f6b');
+  glow(x,y-43+mb,9,'#ff9f6b',0.16);
+}
+
 function drawNpcStreet(){
   var list=G.street||[];
   for(var i=0;i<list.length;i++){
@@ -3261,13 +3664,19 @@ function renderCell(cw,ch,groundY,fn){
 
 var SHEET_DEFS={
   npc:{
-    cols:4, cellW:54, cellH:66, ground:52, scale:4, title:'八位特殊 NPC',
+    cols:5, cellW:54, cellH:66, ground:52, scale:4, title:'特殊 NPC · 八位常驻 + 第四幕陈晓',
     items:function(){
       var out=[];
       for(var i=0;i<NPCS.length;i++){
         var n=NPCS[i];
         out.push({label:n.name, sub:n.role, draw:(function(id){return function(x,y){ drawNpc(id,x,y,{face:1,bob:0}); };})(n.id)});
       }
+      out.push({label:'陈晓', sub:'第四幕 · 清街队队长', draw:function(x,y){
+        var ox0=G.xiao, op=G.pact, oph=G.phase, ot=G.tick;
+        G.xiao={x:x}; G.pact=null; G.phase='day'; G.tick=0.4;
+        drawXiao();
+        G.xiao=ox0; G.pact=op; G.phase=oph; G.tick=ot;
+      }});
       return out;
     }
   },
@@ -3431,7 +3840,9 @@ function draw(){
   for(var i=0;i<slots.length;i++){ if(slots[i].st) drawStructure(slots[i].st); }
   drawReflections(night);
   drawOrderGhost();
+  drawCenterDoor();
   drawNpcStreet();
+  drawXiao();
   drawZhou();
   for(var j=0;j<G.fighters.length;j++) drawFighter(G.fighters[j]);
   for(var k=0;k<G.enemies.length;k++) drawEnemy(G.enemies[k]);
@@ -3458,16 +3869,13 @@ function draw(){
     ctx.fillRect(0,0,VW,VH);
   }
   var pw=clamp(G.dayRevenue/Math.max(1,G.dayTarget),0,1);
+  var pby=VH-4;
   ctx.fillStyle='rgba(6,10,18,0.72)';
-  ctx.fillRect(VW/2-41,1,82,7);
+  ctx.fillRect(VW/2-31,pby,62,4);
   ctx.fillStyle='#121a29';
-  ctx.fillRect(VW/2-40,2,80,5);
+  ctx.fillRect(VW/2-30,pby+1,60,2);
   ctx.fillStyle=G.dayRevenue>=G.dayTarget?'#7ff0c4':'#3ee9ff';
-  ctx.fillRect(VW/2-40,2,80*pw,5);
-  if(pw>0){
-    ctx.fillStyle='rgba(255,255,255,0.35)';
-    ctx.fillRect(VW/2-40,2,80*pw,1);
-  }
+  ctx.fillRect(VW/2-30,pby+1,60*pw,2);
 }
 // ============================== 主循环 ==============================
 var last=0;
@@ -3494,6 +3902,7 @@ function loop(ts){
     updateTutorial();
     syncObjective();
     checkNpcTasks();
+    storyCheck();
   }
   if(!window.__NODRAW__) draw();
   requestAnimationFrame(loop);
@@ -3565,7 +3974,11 @@ window.__DBG__={
   get panel(){return panel;}, get panelWrap(){return panelWrap;}, get keys(){return keys;},
   hitTest:hitTest, pressStart:pressStart, pressEnd:pressEnd, installTouch:installTouch,
   get tutIndex(){return tutIndex;}, get tutActive(){return tutActive;},
-  setTut:function(i){ tutIndex=i; tutActive=true; }, skipTut:function(){ tutActive=false; }
+  setTut:function(i){ tutIndex=i; tutActive=true; }, skipTut:function(){ tutActive=false; },
+  storyPanel:storyPanel, storyRead:storyRead, npcPanel:npcPanel, storyCheck:storyCheck,
+  doorState:doorState, endingA:endingA, joinNpc:joinNpc, hasNpc:hasNpc,
+  npcChipText:npcChipText, npcState:npcState, npcCondText:npcCondText, settleLine:settleLine,
+  get DOOR_X(){return DOOR_X;}, xiaoDialog:xiaoDialog, doPact:doPact
 };
 })();
 </script>
