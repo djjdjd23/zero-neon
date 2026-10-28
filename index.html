@@ -65,7 +65,50 @@
   #pad{position:absolute;z-index:6;pointer-events:none}
   #pad .big{pointer-events:none}
   #obj{position:absolute;z-index:7}
-  #panelWrap{z-index:60}
+  /* ---------- 开场 / 选档 ---------- */
+  .ovl{position:absolute;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;
+    background:radial-gradient(ellipse at 50% 38%,rgba(12,22,40,.90) 0%,rgba(4,6,12,.97) 72%);
+    font-size:calc(var(--s)*8);color:#dbe7f7;overflow:hidden}
+  #game.title-mode #top,#game.title-mode #obj,#game.title-mode #pad,#game.title-mode #toast{display:none!important}
+  .ovl::after{content:'';position:absolute;inset:0;pointer-events:none;
+    background:repeating-linear-gradient(0deg,rgba(0,0,0,.32) 0 1px,transparent 1px 3px);opacity:.5}
+  .tt-inner{position:relative;z-index:2;text-align:center;padding:calc(var(--s)*4)}
+  .tt-kicker{font-size:calc(var(--s)*5.4);letter-spacing:.42em;color:#4f7fa8;margin-bottom:calc(var(--s)*2)}
+  .tt-logo{position:relative;margin:0;font-size:calc(var(--s)*27);line-height:1;letter-spacing:.06em;font-weight:800;
+    color:#eaf6ff;text-shadow:0 0 calc(var(--s)*5) rgba(62,233,255,.55),0 0 calc(var(--s)*16) rgba(255,63,164,.35)}
+  .tt-logo span{color:#3ee9ff;margin-left:.06em}
+  .tt-cn{margin-top:calc(var(--s)*1.4);font-size:calc(var(--s)*9);letter-spacing:.16em;color:#ff5aa0;
+    text-shadow:0 0 calc(var(--s)*5) rgba(255,90,160,.5)}
+  .tt-tag{margin-top:calc(var(--s)*3);font-size:calc(var(--s)*6.6);color:#8fa3bd}
+  .tt-btns{margin-top:calc(var(--s)*6);display:flex;gap:calc(var(--s)*3.2);justify-content:center;align-items:center;flex-wrap:wrap}
+  .tt-main{font-size:calc(var(--s)*9.6)!important;padding:calc(var(--s)*3.4) calc(var(--s)*9)!important;
+    border-color:#3d7fd0!important;background:#16324f!important;letter-spacing:.12em}
+  .tt-main:active{background:#22496f!important}
+  .tt-foot{margin-top:calc(var(--s)*5);font-size:calc(var(--s)*5.2);color:#4a5b72;letter-spacing:.1em}
+  .tt-credit{margin-top:calc(var(--s)*1.6);font-size:calc(var(--s)*4.4);color:#33445c;letter-spacing:.04em}
+  .sl-inner{position:relative;z-index:2;width:100%;max-width:calc(var(--s)*250);padding:0 calc(var(--s)*6)}
+  .sl-inner h2{margin:0 0 calc(var(--s)*4);text-align:center;font-size:calc(var(--s)*10);color:#8fd3ff;font-weight:600;letter-spacing:.2em}
+  .sl-list{display:flex;flex-direction:column;gap:calc(var(--s)*2.6)}
+  .sl-card{display:flex;align-items:center;gap:calc(var(--s)*3);padding:calc(var(--s)*3) calc(var(--s)*3.4);
+    border:1px solid #1f2d44;border-radius:calc(var(--s)*2);background:#0b1220;cursor:pointer}
+  .sl-card:active{background:#131e33}
+  .sl-card.empty{opacity:.72;border-style:dashed}
+  .sl-no{width:calc(var(--s)*14);height:calc(var(--s)*14);flex:0 0 auto;display:flex;align-items:center;justify-content:center;
+    border-radius:calc(var(--s)*2);background:#13203a;border:1px solid #2a3d5c;font-size:calc(var(--s)*7);color:#8fd3ff}
+  .sl-body{flex:1;min-width:0}
+  .sl-title{font-size:calc(var(--s)*7.4);color:#e6eefb}
+  .sl-meta{font-size:calc(var(--s)*5.6);color:#7f8da8;margin-top:calc(var(--s)*.6);line-height:1.45;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .sl-meta b{color:#ffd86b;font-weight:600}
+  .sl-del{flex:0 0 auto;font-size:calc(var(--s)*5.6);color:#b8434f;border:1px solid #4a2129;border-radius:calc(var(--s)*1.6);
+    padding:calc(var(--s)*1.2) calc(var(--s)*2.4);background:#1a0d12}
+  .sl-del:active{background:#2a1218}
+  .sl-foot{margin-top:calc(var(--s)*4);display:flex;justify-content:center;gap:calc(var(--s)*3)}
+  /* 音量条 */
+  .vol{display:flex;align-items:center;gap:calc(var(--s)*2);padding:calc(var(--s)*2.4) calc(var(--s)*3);
+    border:1px solid #1d2740;border-radius:calc(var(--s)*2);background:#101728;margin-bottom:calc(var(--s)*2);
+    font-size:calc(var(--s)*7)}
+  .vol input{flex:1;accent-color:#3ee9ff;height:calc(var(--s)*3)}
+  #panelWrap{z-index:90}
   .pulse{animation:btnPulse 1.05s ease-in-out infinite}
   @keyframes btnPulse{
     0%,100%{box-shadow:0 0 0 0 rgba(255,216,107,0);border-color:#33456a}
@@ -136,11 +179,10 @@
         <button class="btn" data-sp="2">2×</button>
         <button class="btn" data-sp="4">4×</button>
         <button class="btn" id="deployBtn">布防</button>
-        <button class="btn" id="storyBtn">街史</button>
         <button class="btn" id="pauseBtn">II</button>
         <button class="btn" id="skipBtn" style="display:none">跳过</button>
         <button class="btn" id="flipBtn">翻转</button>
-        <button class="btn" id="helpBtn">?</button>
+        <button class="btn" id="menuBtn">菜单</button>
       </div>
     </div>
 
@@ -155,6 +197,30 @@
       </div>
       <div class="side">
         <div class="big" id="eBtn">E</div>
+      </div>
+    </div>
+
+    <div id="titleScr" class="ovl" style="display:none">
+      <div class="tt-inner">
+        <div class="tt-kicker">QINGHE STREET · 2087</div>
+        <h1 class="tt-logo">ZERO<span>NEON</span></h1>
+        <div class="tt-cn">零点霓虹</div>
+        <div class="tt-tag">白天做生意，夜里……有人会来砸。</div>
+        <div class="tt-btns">
+          <button class="btn tt-main" id="ttStart">开始游戏</button>
+          <button class="btn" id="ttHelp">玩法说明</button>
+          <button class="btn" id="ttAudio">音效：开</button>
+        </div>
+        <div class="tt-foot">建议横屏 · 三个存档槽 · 每晚自动保存</div>
+        <div class="tt-credit">音乐 Retro Synthwave Loops · Tomasz Kucza（CC BY 4.0）</div>
+      </div>
+    </div>
+
+    <div id="slotScr" class="ovl" style="display:none">
+      <div class="sl-inner">
+        <h2>选择存档</h2>
+        <div class="sl-list" id="slList"></div>
+        <div class="sl-foot"><button class="btn" id="slBack">返回</button></div>
       </div>
     </div>
 
@@ -308,6 +374,599 @@ var gameEl=$('game'), cv=$('c'), ctx=cv.getContext('2d');
 ctx.imageSmoothingEnabled=false;
 var panelWrap=$('panelWrap'), panel=$('panel');
 
+
+
+// ============================== 存档（三个槽 · localStorage） ==============================
+var SAVE_KEY='zn_save_v1_';
+var curSlot=null;
+function slotKey(i){ return SAVE_KEY+i; }
+function readSlot(i){
+  try{
+    var raw=localStorage.getItem(slotKey(i));
+    if(!raw) return null;
+    var d=JSON.parse(raw);
+    if(!d||!d.g||typeof d.sum==='undefined') return null;
+    return d;
+  }catch(e){ return null; }
+}
+function hasAnySave(){
+  for(var i=0;i<3;i++) if(readSlot(i)) return true;
+  return false;
+}
+function latestSlot(){
+  var best=-1, bt=0;
+  for(var i=0;i<3;i++){ var d=readSlot(i); if(d&&d.ts>bt){ bt=d.ts; best=i; } }
+  return best;
+}
+function writeSlot(i){
+  if(i===null||i===undefined) return false;
+  try{
+    var g={};
+    for(var k in G) g[k]=G[k];
+    // 瞬态数据不存
+    g.parts=[]; g.projs=[]; g.enemies=[]; g.customers=[]; g.gcoins=[];
+    g.paused=false; g.userPaused=false; g.flash=0; g.over=false; g.settle=null;
+    // 夜里/结算中保存 → 回滚到当天白天开头
+    if(g.phase==='night'||g.phase==='settle'){
+      g.phase='day'; g.t=DAY_LEN; g.speed=1; g.wavesLeft=0; g.waveTimer=0;
+      if(g.homeHP<=0) g.homeHP=Math.max(1,Math.floor(g.homeMax*0.3));
+    }
+    g.slot=i;
+    var data={ v:1, ts:Date.now(), slot:i,
+      sum:{day:g.day,purse:Math.floor(g.purse),vault:Math.floor(g.vault),
+           prestige:Math.floor(g.prestige),home:g.homeLevel,rev:Math.floor(g.totalRevenue),
+           phase:g.phase},
+      g:JSON.parse(JSON.stringify(g)),
+      slots:slots.map(function(s){ return {st:s.st?JSON.parse(JSON.stringify(s.st)):null}; })
+    };
+    localStorage.setItem(slotKey(i),JSON.stringify(data));
+    return true;
+  }catch(e){ return false; }
+}
+function deleteSlot(i){
+  try{ localStorage.removeItem(slotKey(i)); return true; }catch(e){ return false; }
+}
+function isNightPhase(){ return G.phase==='night'; }
+
+// ============================== 开场 / 选档 ==============================
+function showTitle(){
+  var t=$('titleScr'), sl=$('slotScr');
+  if(t) t.style.display='flex';
+  if(sl) sl.style.display='none';
+  if(gameEl) gameEl.classList.add('title-mode');
+  auPhaseBgm();
+  var a=$('ttAudio');
+  if(a) a.textContent='音效：'+(AU.bgm&&AU.sfx?'开':(AU.bgm||AU.sfx?'部分':'关'));
+}
+function hideTitle(){
+  var t=$('titleScr'), sl=$('slotScr');
+  if(t) t.style.display='none';
+  if(sl) sl.style.display='none';
+  if(gameEl) gameEl.classList.remove('title-mode');
+  auPhaseBgm();
+}
+function fmtTime(ts){
+  try{
+    var d=new Date(ts);
+    function z(n){ return n<10?('0'+n):(''+n); }
+    return (d.getMonth()+1)+'月'+d.getDate()+'日 '+z(d.getHours())+':'+z(d.getMinutes());
+  }catch(e){ return ''; }
+}
+function renderSlots(){
+  var list=$('slList'); if(!list) return;
+  var h='';
+  for(var i=0;i<3;i++){
+    var d=readSlot(i);
+    if(d){
+      h+='<div class="sl-card" data-slot="'+i+'">'+
+         '<div class="sl-no">'+(i+1)+'</div>'+
+         '<div class="sl-body">'+
+           '<div class="sl-title">第 '+d.sum.day+' 天 · 家 Lv'+d.sum.home+'</div>'+
+           '<div class="sl-meta">💰<b>'+d.sum.purse+'</b> · 库 '+d.sum.vault+' · ⭐<b>'+d.sum.prestige+'</b> · 累计营收 '+d.sum.rev+'<br>'+fmtTime(d.ts)+' 保存</div>'+
+         '</div>'+
+         '<div class="sl-del" data-del="'+i+'">删除</div>'+
+         '</div>';
+    } else {
+      h+='<div class="sl-card empty" data-slot="'+i+'">'+
+         '<div class="sl-no">'+(i+1)+'</div>'+
+         '<div class="sl-body"><div class="sl-title">空存档</div>'+
+         '<div class="sl-meta">点这里开一局新的</div></div></div>';
+    }
+  }
+  list.innerHTML=h;
+}
+function showSlots(){
+  renderSlots();
+  var t=$('titleScr'), sl=$('slotScr');
+  if(t) t.style.display='none';
+  if(sl) sl.style.display='flex';
+}
+function newGame(i){
+  curSlot=i;
+  reset();
+  G.slot=i;
+  hideTitle();
+  auPhaseBgm();
+  sfx('click');
+  tutorialStart();
+}
+function loadGame(i){
+  var d=readSlot(i);
+  if(!d) return false;
+  curSlot=i;
+  reset();
+  var g=d.g;
+  for(var k in g) G[k]=g[k];
+  G.started=true; G.paused=false; G.userPaused=false; G.over=false; G.flash=0;
+  G.slot=i;
+  for(var j=0;j<slots.length;j++){
+    var sv=d.slots&&d.slots[j];
+    slots[j].st=(sv&&sv.st)?sv.st:null;
+    if(slots[j].st) slots[j].st.slot=j;
+  }
+  if(G.player&&typeof G.player.x!=='number') G.player.x=0;
+  G.camX=G.player.x;
+  tutActive=false;
+  try{ recomputePower(); }catch(e){}
+  syncHUD(); lastObj='';
+  closePanel();
+  hideTitle();
+  auPhaseBgm();
+  sfx('save');
+  return true;
+}
+
+// ============================== 主菜单 ==============================
+function mainMenu(){
+  var bound=(curSlot!==null&&curSlot!==undefined);
+  var slotTxt=bound?('存档 '+(curSlot+1)):'未绑定存档';
+  var h='<h3>主菜单</h3>';
+  h+='<div class="txt" style="color:#8fd3ff">'+slotTxt+' · 第 '+G.day+' 天 · 每晚天亮自动保存</div>';
+  h+=row('保存进度', bound?('写入存档 '+(curSlot+1)):'当前没有绑定存档槽', '', !bound||G.phase==='night', 'saveNow');
+  h+=row('读取存档','从三个存档槽载入','',false,'loadPanel');
+  h+=row('游戏音乐','背景音乐 '+(AU.bgm?'开':'关'),
+    AU.bgm?'<span style="color:#7ff0c4">开</span>':'<span style="color:#7f8da8">关</span>', false, 'toggleBgm');
+  h+=row('游戏音效','点击 / 战斗 / 提示音 '+(AU.sfx?'开':'关'),
+    AU.sfx?'<span style="color:#7ff0c4">开</span>':'<span style="color:#7f8da8">关</span>', false, 'toggleSfx');
+  h+=row('玩法说明','操作、建造、夜晚规则','',false,'help');
+  h+=row('街史','五幕剧情 · 结局档案','',false,'story');
+  h+=row('布防 · 调度','设置每人守左 / 守右 / 自动','',false,'deploy');
+  h+=row('回到主菜单','先自动保存，再回开场页（可换存档）','',false,'toTitle');
+  h+='<div class="foot"><button class="btn" data-act="close">继续游戏</button></div>';
+  openPanel(h);
+}
+function loadPanel(){
+  var h='<h3>读取存档</h3>';
+  for(var i=0;i<3;i++){
+    var d=readSlot(i);
+    if(d){
+      h+=row('存档 '+(i+1)+' · 第 '+d.sum.day+' 天',
+        '💰'+d.sum.purse+' · ⭐'+d.sum.prestige+' · 家 Lv'+d.sum.home+' · '+fmtTime(d.ts),
+        '', false, 'loadSlot:'+i);
+    } else {
+      h+=row('存档 '+(i+1),'空存档','',true,'none');
+    }
+  }
+  h+='<div class="txt" style="color:#ff9f6b">载入会替换当前进度，没保存的部分会丢失。</div>';
+  h+='<div class="foot"><button class="btn" data-act="mainMenu">返回</button></div>';
+  openPanel(h);
+}
+
+function manualSave(){
+  if(curSlot===null||curSlot===undefined){
+    dialogBox('保存',['还没有绑定存档槽。','从开场页面选择存档后再开始吧。'],'close');
+    return;
+  }
+  if(G.phase==='night'){
+    dialogBox('保存',['夜间不能保存。','等天亮结算后会自动保存一次，或者白天再手动保存。'],'close');
+    return;
+  }
+  var ok=writeSlot(curSlot);
+  sfx(ok?'save':'error');
+  showToast(ok?('已保存到存档 '+(curSlot+1)):'保存失败（浏览器存储不可用）','#7ff0c4');
+}
+
+// ============================== 音频引擎（Web Audio 实时合成） ==============================
+// 目标音色：合成器浪潮（synthwave）——多层振荡器 + 低通包络 + 卷积混响
+var AU={ctx:null,master:null,bgmGain:null,sfxGain:null,rev:null,revGain:null,
+  bgm:true,sfx:true,mode:'off',timer:null,step:0,nextT:0,noiseBuf:null};
+var AU_KEY='zn_audio_v2';
+
+function auLoadPrefs(){
+  try{
+    var d=JSON.parse(localStorage.getItem(AU_KEY)||'{}');
+    if(typeof d.bgm==='boolean') AU.bgm=d.bgm;
+    if(typeof d.sfx==='boolean') AU.sfx=d.sfx;
+  }catch(e){}
+}
+function auSavePrefs(){
+  try{ localStorage.setItem(AU_KEY,JSON.stringify({bgm:AU.bgm,sfx:AU.sfx})); }catch(e){}
+}
+function mf(n){ return 440*Math.pow(2,(n-69)/12); }
+
+function auInit(){
+  if(AU.ctx){
+    if(AU.ctx.state==='suspended'){ try{ AU.ctx.resume(); }catch(e){} }
+    auPhaseBgm();
+    return;
+  }
+  var AC=window.AudioContext||window.webkitAudioContext;
+  if(!AC) return;
+  try{ AU.ctx=new AC(); }catch(e){ return; }
+  var c=AU.ctx;
+  AU.master=c.createGain(); AU.master.gain.value=0.9; AU.master.connect(c.destination);
+
+  // 卷积混响：程序生成 2.2 秒衰减脉冲
+  try{
+    var rl=Math.floor(c.sampleRate*2.2);
+    var ir=c.createBuffer(2,rl,c.sampleRate);
+    for(var ch=0;ch<2;ch++){
+      var d=ir.getChannelData(ch);
+      for(var i=0;i<rl;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/rl,2.8);
+    }
+    AU.rev=c.createConvolver(); AU.rev.buffer=ir;
+    AU.revGain=c.createGain(); AU.revGain.gain.value=0.6;
+    AU.rev.connect(AU.revGain); AU.revGain.connect(AU.master);
+  }catch(e){ AU.rev=null; }
+
+  AU.bgmGain=c.createGain(); AU.bgmGain.gain.value=AU.bgm?0.55:0; AU.bgmGain.connect(AU.master);
+  AU.sfxGain=c.createGain(); AU.sfxGain.gain.value=AU.sfx?0.6:0; AU.sfxGain.connect(AU.master);
+
+  var len=Math.floor(c.sampleRate*0.6);
+  try{
+    AU.noiseBuf=c.createBuffer(1,len,c.sampleRate);
+    var nd=AU.noiseBuf.getChannelData(0);
+    for(var j=0;j<len;j++) nd[j]=Math.random()*2-1;
+  }catch(e){ AU.noiseBuf=null; }
+
+  auPhaseBgm();
+  if(typeof setTimeout==='function') setTimeout(function(){ try{ preloadMusic(); }catch(e){} },900);
+}
+function auSetBgm(on){
+  AU.bgm=!!on; auSavePrefs();
+  if(AU.bgmGain) AU.bgmGain.gain.value=AU.bgm?0.55:0;
+}
+function auSetSfx(on){
+  AU.sfx=!!on; auSavePrefs();
+  if(AU.sfxGain) AU.sfxGain.gain.value=AU.sfx?0.6:0;
+}
+
+// 一个"声部"：多层振荡器 + 滤波包络 + ADSR + 混响发送
+function auVoice(o){
+  var c=AU.ctx; if(!c) return;
+  var t=(o.when===undefined||o.when===null)?c.currentTime:o.when;
+  var dur=o.dur||0.2;
+  var dest=o.dest||AU.bgmGain;
+  var g=c.createGain();
+  var tail=g;
+  if(o.cutoff){
+    var f=c.createBiquadFilter();
+    f.type=o.filter||'lowpass';
+    try{
+      f.frequency.setValueAtTime(o.cutoff,t);
+      if(o.cutoffEnd) f.frequency.exponentialRampToValueAtTime(Math.max(60,o.cutoffEnd),t+dur);
+    }catch(e){}
+    f.Q.value=o.q||0.9;
+    g.connect(f); tail=f;
+  }
+  tail.connect(dest);
+  if(o.rev&&AU.rev){
+    var s=c.createGain(); s.gain.value=o.rev;
+    tail.connect(s); s.connect(AU.rev);
+  }
+  var att=o.attack||0.008;
+  var vol=Math.max(0.0002,o.vol||0.12);
+  try{
+    g.gain.setValueAtTime(0.0001,t);
+    g.gain.exponentialRampToValueAtTime(vol,t+att);
+    g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+  }catch(e){}
+  var n=o.voices||1;
+  for(var i=0;i<n;i++){
+    var osc=c.createOscillator();
+    osc.type=o.type||'sine';
+    try{
+      osc.frequency.setValueAtTime(o.f,t);
+      if(o.glide) osc.frequency.exponentialRampToValueAtTime(Math.max(20,o.glide),t+dur*0.85);
+      if(n>1) osc.detune.setValueAtTime((i-(n-1)/2)*(o.spread||8),t);
+    }catch(e){}
+    osc.connect(g);
+    try{ osc.start(t); osc.stop(t+dur+0.06); }catch(e){}
+  }
+}
+function auNoise(dur,vol,freq,when,type,dest){
+  var c=AU.ctx; if(!c||!AU.noiseBuf) return;
+  var t=(when===undefined||when===null)?c.currentTime:when;
+  var src=c.createBufferSource(); src.buffer=AU.noiseBuf;
+  var f=c.createBiquadFilter(); f.type=type||'bandpass';
+  f.frequency.value=freq||1200; f.Q.value=0.9;
+  var g=c.createGain();
+  try{
+    g.gain.setValueAtTime(vol||0.2,t);
+    g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+  }catch(e){}
+  src.connect(f); f.connect(g); g.connect(dest||AU.sfxGain);
+  try{ src.start(t); src.stop(t+dur+0.03); }catch(e){}
+}
+// 鼓组
+function auKick(t,vol){ auVoice({f:150,glide:44,type:'sine',dur:0.26,vol:vol||0.42,when:t,attack:0.004,dest:AU.bgmGain}); }
+function auSnare(t,vol){
+  var v=vol||0.16;
+  auNoise(0.15,v,1700,t,'bandpass',AU.bgmGain);
+  auVoice({f:190,glide:140,type:'triangle',dur:0.1,vol:v*0.55,when:t,dest:AU.bgmGain});
+}
+function auHat(t,vol){ auNoise(0.04,vol||0.055,8200,t,'highpass',AU.bgmGain); }
+
+// ---------- 音效 ----------
+var SFX={
+  click:function(){
+    auVoice({f:1250,type:'triangle',dur:0.045,vol:0.16,dest:AU.sfxGain,attack:0.003,rev:0.12});
+    auNoise(0.018,0.07,3200,undefined,'highpass',AU.sfxGain);
+  },
+  back:function(){ auVoice({f:780,glide:430,type:'triangle',dur:0.07,vol:0.14,dest:AU.sfxGain}); },
+  error:function(){
+    auVoice({f:190,type:'square',dur:0.13,vol:0.11,dest:AU.sfxGain,cutoff:1100});
+    auVoice({f:150,type:'square',dur:0.16,vol:0.08,dest:AU.sfxGain,cutoff:900,when:(AU.ctx?AU.ctx.currentTime+0.07:0)});
+  },
+  build:function(){
+    var t=AU.ctx?AU.ctx.currentTime:0;
+    auVoice({f:mf(64),type:'triangle',dur:0.12,vol:0.12,when:t,dest:AU.sfxGain,rev:0.2});
+    auVoice({f:mf(69),type:'triangle',dur:0.12,vol:0.12,when:t+0.1,dest:AU.sfxGain,rev:0.2});
+    auVoice({f:mf(72),type:'triangle',dur:0.18,vol:0.12,when:t+0.2,dest:AU.sfxGain,rev:0.3});
+  },
+  upgrade:function(){
+    var t=AU.ctx?AU.ctx.currentTime:0;
+    [60,64,67,72].forEach(function(n,i){
+      auVoice({f:mf(n),type:'triangle',dur:0.16,vol:0.11,when:t+i*0.08,dest:AU.sfxGain,rev:0.35,voices:2,spread:6});
+    });
+  },
+  coin:function(){
+    var t=AU.ctx?AU.ctx.currentTime:0;
+    auVoice({f:mf(84),type:'triangle',dur:0.07,vol:0.10,when:t,dest:AU.sfxGain,rev:0.2});
+    auVoice({f:mf(88),type:'triangle',dur:0.12,vol:0.09,when:t+0.055,dest:AU.sfxGain,rev:0.3});
+  },
+  hit:function(){
+    auNoise(0.05,0.16,1900,undefined,'bandpass',AU.sfxGain);
+    auVoice({f:240,glide:120,type:'triangle',dur:0.07,vol:0.10,dest:AU.sfxGain});
+  },
+  kill:function(){
+    auNoise(0.16,0.2,900,undefined,'lowpass',AU.sfxGain);
+    auVoice({f:300,glide:70,type:'sawtooth',dur:0.18,vol:0.12,dest:AU.sfxGain,cutoff:1400,cutoffEnd:300});
+  },
+  hurt:function(){
+    auVoice({f:160,glide:72,type:'sawtooth',dur:0.22,vol:0.18,dest:AU.sfxGain,cutoff:900,cutoffEnd:240});
+    auNoise(0.12,0.13,320,undefined,'lowpass',AU.sfxGain);
+  },
+  alert:function(){
+    var t=AU.ctx?AU.ctx.currentTime:0;
+    auVoice({f:mf(69),type:'square',dur:0.18,vol:0.1,when:t,dest:AU.sfxGain,cutoff:2000,rev:0.3});
+    auVoice({f:mf(65),type:'square',dur:0.18,vol:0.1,when:t+0.2,dest:AU.sfxGain,cutoff:1800,rev:0.3});
+    auVoice({f:mf(69),type:'square',dur:0.24,vol:0.1,when:t+0.4,dest:AU.sfxGain,cutoff:2000,rev:0.35});
+  },
+  win:function(){
+    var t=AU.ctx?AU.ctx.currentTime:0;
+    [72,76,79,84].forEach(function(n,i){
+      auVoice({f:mf(n),type:'triangle',dur:0.3,vol:0.1,when:t+i*0.11,dest:AU.sfxGain,rev:0.45,voices:2,spread:7});
+    });
+  },
+  save:function(){
+    var t=AU.ctx?AU.ctx.currentTime:0;
+    auVoice({f:mf(79),type:'triangle',dur:0.09,vol:0.1,when:t,dest:AU.sfxGain,rev:0.25});
+    auVoice({f:mf(84),type:'triangle',dur:0.14,vol:0.09,when:t+0.07,dest:AU.sfxGain,rev:0.3});
+  },
+  door:function(){
+    auVoice({f:88,glide:52,type:'sawtooth',dur:0.7,vol:0.14,dest:AU.sfxGain,cutoff:600,cutoffEnd:140,rev:0.4});
+    auNoise(0.5,0.1,240,undefined,'lowpass',AU.sfxGain);
+  }
+};
+var SFX_RATE={click:1.12,hurt:0.78,kill:0.92,coin:1.0,build:1.0};
+function sfx(name){
+  if(!AU.ctx||!AU.sfx) return;
+  if(playSfx(name,0.9,SFX_RATE[name])) return;   // 有采样就用采样
+  var f=SFX[name]; if(!f) return;
+  try{ f(); }catch(e){}
+}
+
+// ---------- 编曲 ----------
+var CHORDS={
+  Am7:[57,60,64,67],
+  Fmaj7:[53,57,60,64],
+  Cmaj7:[48,52,55,59],
+  G6:[55,59,62,64]
+};
+var PROG=['Am7','Fmaj7','Cmaj7','G6'];
+var AU_PAT={
+  title:{ bpm:64,  arpEvery:0,  arpNotes:[0,2,3], bass:false, drums:0, pad:true,  rev:0.7, pluck:true },
+  day:  { bpm:100, arpEvery:2,  arpNotes:[0,2,1,3,2,1,2,3], bass:true, drums:2, pad:true,  rev:0.35 },
+  dusk: { bpm:86,  arpEvery:4,  arpNotes:[0,1,2,3], bass:true, drums:0, pad:true,  rev:0.5 },
+  night:{ bpm:72,  arpEvery:8,  arpNotes:[0,2,1], bass:true, drums:1, pad:true,  rev:0.55 }
+};
+// ---------- 真实音乐（Retro Synthwave Loops · Tomasz Kucza · CC BY 4.0） ----------
+var MUSIC_FILE={
+  title:'audio/shadow_operations-loop1.ogg',
+  day:  'audio/going_undercover-loop1.ogg',
+  dusk: 'audio/deadly_contracts-loop1.ogg',
+  night:'audio/hostile_territory-loop1.ogg'
+};
+var MUSIC_BUF={}, MUSIC_LOADING={}, musicSrc=null, musicGain=null, curTrack=null;
+
+// 真实音效采样（kenney/chiptune CC0 · opengameart "Chiptune SFX Pack"）
+var SFX_FILE={
+  click:'audio/click_2.wav',
+  coin:'audio/coin_1.wav',
+  hit:'audio/damaged.wav',
+  hurt:'audio/damaged.wav',
+  kill:'audio/fail.wav',
+  error:'audio/fail.wav',
+  upgrade:'audio/level_up.wav',
+  build:'audio/level_up.wav',
+  win:'audio/level_passed.wav',
+  save:'audio/pick_up.wav'
+};
+var SFX_BUF={}, SFX_LOADING={};
+function loadSfx(name){
+  if(SFX_BUF[name]||SFX_LOADING[name]) return;
+  if(typeof fetch!=='function'||!AU.ctx) return;
+  var url=SFX_FILE[name]; if(!url) return;
+  SFX_LOADING[name]=true;
+  fetch(url)
+    .then(function(r){ if(!r.ok) throw new Error('http '+r.status); return r.arrayBuffer(); })
+    .then(function(ab){
+      return new Promise(function(res,rej){
+        try{ AU.ctx.decodeAudioData(ab,res,rej); }catch(e){ rej(e); }
+      });
+    })
+    .then(function(buf){ SFX_BUF[name]=buf; SFX_LOADING[name]=false; })
+    .catch(function(){ SFX_LOADING[name]=false; });
+}
+function playSfx(name,vol,rate){
+  var b=SFX_BUF[name]; if(!b||!AU.ctx) return false;
+  try{
+    var c=AU.ctx, s=c.createBufferSource(), g=c.createGain();
+    s.buffer=b;
+    if(rate) s.playbackRate.value=rate;
+    g.gain.value=(vol===undefined?0.85:vol);
+    s.connect(g); g.connect(AU.sfxGain);
+    s.start();
+    return true;
+  }catch(e){ return false; }
+}
+
+function loadTrack(mode){
+  if(MUSIC_BUF[mode]||MUSIC_LOADING[mode]) return;
+  if(typeof fetch!=='function'||!AU.ctx) return;
+  var url=MUSIC_FILE[mode]; if(!url) return;
+  MUSIC_LOADING[mode]=true;
+  fetch(url)
+    .then(function(r){ if(!r.ok) throw new Error('http '+r.status); return r.arrayBuffer(); })
+    .then(function(ab){
+      return new Promise(function(res,rej){
+        try{ AU.ctx.decodeAudioData(ab,res,rej); }catch(e){ rej(e); }
+      });
+    })
+    .then(function(buf){
+      MUSIC_BUF[mode]=buf; MUSIC_LOADING[mode]=false;
+      if(AU.mode===mode&&AU.ctx){ stopSynth(); playTrack(mode); }
+    })
+    .catch(function(){ MUSIC_LOADING[mode]=false; });
+}
+function playTrack(mode){
+  var buf=MUSIC_BUF[mode]; if(!buf||!AU.ctx) return;
+  if(curTrack===mode&&musicSrc) return;
+  stopTrack(true);
+  var c=AU.ctx;
+  musicGain=c.createGain();
+  try{
+    musicGain.gain.setValueAtTime(0.0001,c.currentTime);
+    musicGain.gain.exponentialRampToValueAtTime(0.8,c.currentTime+1.4);
+  }catch(e){ musicGain.gain.value=0.8; }
+  musicGain.connect(AU.bgmGain);
+  musicSrc=c.createBufferSource();
+  musicSrc.buffer=buf; musicSrc.loop=true;
+  musicSrc.connect(musicGain);
+  try{ musicSrc.start(); }catch(e){}
+  curTrack=mode;
+}
+function stopTrack(fade){
+  var s=musicSrc, g=musicGain;
+  if(!s) return;
+  musicSrc=null; musicGain=null; curTrack=null;
+  var c=AU.ctx;
+  try{
+    if(fade&&g&&c){
+      var now=c.currentTime;
+      g.gain.cancelScheduledValues(now);
+      g.gain.setValueAtTime(Math.max(0.0001,g.gain.value||0.0001),now);
+      g.gain.exponentialRampToValueAtTime(0.0001,now+0.5);
+      setTimeout(function(){ try{ s.stop(); }catch(e){} try{ g.disconnect(); }catch(e){} },580);
+    } else {
+      s.stop(); g.disconnect();
+    }
+  }catch(e){}
+}
+function startSynth(mode){
+  if(!AU.ctx) return;
+  if(AU.timer){ clearInterval(AU.timer); AU.timer=null; }
+  AU.step=0; AU.nextT=AU.ctx.currentTime+0.1;
+  if(typeof setInterval==='function') AU.timer=setInterval(auTick,110);
+}
+function stopSynth(){ if(AU.timer){ clearInterval(AU.timer); AU.timer=null; } }
+function preloadMusic(){
+  ['day','night','dusk','title'].forEach(function(m){ loadTrack(m); });
+  ['click','coin','hit','hurt','kill','error','upgrade','build','win','save'].forEach(function(n){ loadSfx(n); });
+}
+function auBgm(mode){
+  AU.mode=mode||'off';
+  if(!AU.ctx||AU.mode==='off'){ stopSynth(); stopTrack(true); return; }
+  var file=MUSIC_FILE[AU.mode];
+  if(file){
+    if(MUSIC_BUF[AU.mode]){ stopSynth(); playTrack(AU.mode); }
+    else { startSynth(AU.mode); loadTrack(AU.mode); }
+  } else {
+    stopTrack(true);
+    startSynth(AU.mode);
+  }
+}
+function auTick(){
+  var c=AU.ctx; if(!c||c.state==='suspended') return;
+  var p=AU_PAT[AU.mode]; if(!p) return;
+  var spb=60/p.bpm/4;
+  var guard=0;
+  while(AU.nextT < c.currentTime+0.6 && guard++<48){
+    var st=AU.step, t=AU.nextT;
+    var bar=Math.floor(st/16);
+    var ch=CHORDS[PROG[Math.floor(bar/2)%4]];
+    var inBar=st%16;
+
+    // 铺底和声（每 2 小节换一次）
+    if(st%32===0){
+      for(var v=0;v<ch.length;v++){
+        auVoice({f:mf(ch[v]-12),type:'triangle',dur:spb*30,vol:0.024,voices:3,spread:11,
+          attack:0.6,cutoff:1500,rev:p.rev,when:t});
+      }
+    }
+    // 低音
+    if(p.bass && inBar%4===0){
+      auVoice({f:mf(ch[0]-24),type:'sawtooth',dur:spb*3.4,vol:0.10,
+        cutoff:AU.mode==='night'?300:420,rev:0.08,when:t});
+    }
+    // 琶音
+    if(p.arpEvery && inBar%p.arpEvery===0){
+      var idx=(st/(p.arpEvery||1))|0;
+      var note=ch[p.arpNotes[idx%p.arpNotes.length]];
+      auVoice({f:mf(note+12),type:'square',dur:spb*(p.arpEvery>4?2.4:1.5),
+        vol:AU.mode==='night'?0.028:0.036,cutoff:AU.mode==='night'?1600:2600,
+        rev:p.rev*0.7,when:t});
+    }
+    // 标题页的稀疏拨弦
+    if(p.pluck && st%16===8){
+      auVoice({f:mf(ch[2]+24),type:'triangle',dur:spb*5,vol:0.05,rev:0.8,when:t});
+    }
+    // 鼓
+    if(p.drums===2){
+      if(inBar===0||inBar===8) auKick(t,0.4);
+      if(inBar===4||inBar===12) auSnare(t,0.15);
+      if(inBar%2===1) auHat(t,0.05);
+    } else if(p.drums===1){
+      if(inBar===0) auKick(t,0.34);
+      if(inBar===8) auHat(t,0.05);
+      if(inBar===12) auHat(t,0.04);
+    }
+    AU.step++; AU.nextT+=spb;
+  }
+}
+function auPhaseBgm(){
+  if(!AU.ctx) return;
+  var m='title';
+  if(G.started&&!G.over) m=(G.phase==='night'?'night':(G.phase==='dusk'?'dusk':'day'));
+  if(m!==AU.mode) auBgm(m);
+}
+function auSuspend(){ if(AU.ctx&&AU.ctx.state==='running'){ try{ AU.ctx.suspend(); }catch(e){} } }
+function auResume(){ if(AU.ctx&&AU.ctx.state==='suspended'){ try{ AU.ctx.resume(); }catch(e){} } }
+document.addEventListener('visibilitychange',function(){
+  if(document.hidden) auSuspend(); else auResume();
+});
+
 function layout(){
   var w=window.innerWidth, h=window.innerHeight;
   var portrait = h>w;
@@ -389,7 +1048,7 @@ function reset(){
     storyOn:{}, storyRead:{}, endings:{}, pact:null, xiao:null, lightsOut:false,
     drops:0, defsBuilt:0, destroyedNight:0, waveTimer:0, wavesLeft:0, waveGap:22,
     longDay:false, kills:0, staff:0, rain:false, flash:0,
-    settle:null, over:false, started:false, story:0, nightDestroyed:0,
+    settle:null, over:false, started:false, story:0, nightDestroyed:0, slot:null,
     camX:0, tick:0, moved:0, collected:0, hardwareOpened:false
   };
   // 原地重置，保持 G 的对象引用（外部/调试引用不会失效）
@@ -600,7 +1259,7 @@ function handleAct(act){
   if(a==='homeUp'){
     var need=LV[G.homeLevel], cost=HOME_UP_COST[G.homeLevel];
     if(G.homeLevel<8 && G.totalRevenue>=need.rev && G.prestige>=need.pres && G.purse>=cost){
-      G.purse-=cost; G.homeLevel++; G.powerCap=LV[G.homeLevel-1].power;
+      G.purse-=cost; G.homeLevel++; G.powerCap=LV[G.homeLevel-1].power; sfx('upgrade');
       G.homeMax=120+ (G.homeLevel-1)*40; G.homeHP=G.homeMax;
       prestige(6); recomputePower(); syncHUD();
     }
@@ -679,7 +1338,26 @@ function handleAct(act){
   if(a==='startGame'){
     closePanel();
     G.started=true;
+    auInit(); auResume(); auPhaseBgm(); sfx('click');
     try{ goLandscape(); }catch(e){}
+    return;
+  }
+  if(a==='saveNow'){ closePanel(); manualSave(); return; }
+  if(a==='mainMenu'){ mainMenu(); return; }
+  if(a==='loadPanel'){ loadPanel(); return; }
+  if(a==='loadSlot'){
+    var li=parseInt(v,10);
+    if(readSlot(li)){ loadGame(li); showToast('已载入存档 '+(li+1),'#7ff0c4'); }
+    return;
+  }
+  if(a==='toggleBgm'){ auSetBgm(!AU.bgm); mainMenu(); return; }
+  if(a==='toggleSfx'){ auSetSfx(!AU.sfx); sfx('click'); mainMenu(); return; }
+  if(a==='toTitle'){
+    closePanel();
+    if(curSlot!==null&&curSlot!==undefined&&G.started&&!G.over) writeSlot(curSlot);
+    G.started=false; G.paused=false; G.userPaused=false;
+    auBgm('off');
+    showTitle();
     return;
   }
 }
@@ -1195,7 +1873,7 @@ function updateShops(dt){
     if(!st) continue;
     if(st.state==='building'){
       st.buildT-=dt;
-      if(st.buildT<=0){ st.state='ok'; recomputePower(); addParts(st.x,GY-10,10,'#7ff0c4'); }
+      if(st.buildT<=0){ st.state='ok'; recomputePower(); addParts(st.x,GY-10,10,'#7ff0c4'); sfx('build'); }
       continue;
     }
     if(st.state!=='ok') continue;
@@ -1237,6 +1915,7 @@ function updateCoins(dt){
         G.collected++;
         G.cashPop=(G.cashPop||0)+1;
         addParts(st.x,GY-16,5,'#ffd86b');
+        if(!G._coinT||G.tick-G._coinT>0.22){ G._coinT=G.tick; sfx('coin'); }
       }
     }
   }
@@ -1246,15 +1925,15 @@ function updateCoins(dt){
 function waveCount(){ return clamp(2+Math.floor(G.day/2)+(hasNpc('man')?1:0),2,9); }
 function startNight(){
   G.phase='night'; G.t=NIGHT_LEN; G.speed=1;
+  sfx('alert'); auPhaseBgm();
   G.wavesLeft=waveCount(); G.waveTimer=10; G.nightDestroyed=0;
-  if(!G.intel) G.intel=planWave();
+  if(!G.plan||!G.plan.length) G.plan=planNight();
+  G.intel=G.plan[0];
   syncHUD();
 }
 function onDuskEnter(){
-  var save=G.wavesLeft;
-  G.wavesLeft=waveCount();
-  G.intel=planWave();
-  G.wavesLeft=save;
+  G.plan=planNight();
+  G.intel=G.plan[0];
   if(G.fighters.length>0) deployPanel();
 }
 function typeNames(arr){
@@ -1275,9 +1954,21 @@ function deployPanel(){
   var it=G.intel||{};
   G.deployOpened=true;
   var h='<h3>'+(G.phase==='dusk'?'黄昏 · 布防':'布防 · 调度')+'</h3>';
+  var plan=G.plan||[];
   if(it.count){
-    h+='<div class="txt">今晚第一波：<b style="color:#ff6b6b">从'+(it.side<0?'左':'右')+'边来</b> · <b>'+it.count+'</b> 名<br>'+
+    var rightN=0,leftN=0;
+    for(var wi=0;wi<plan.length;wi++){ if(plan[wi].side<0) leftN+=plan[wi].count; else rightN+=plan[wi].count; }
+    h+='<div class="txt">今晚 <b>'+plan.length+'</b> 波 · 共 <b>'+rightN+'+'+leftN+'</b> 名（右+左）<br>'+
+       '<span style="color:#ff9f6b">第 1 波 从'+(it.side<0?'左':'右')+'边来</span> · '+it.count+' 名 · '+
        '<span style="color:#8fd3ff">'+typeNames(it.types)+'</span></div>';
+    // 后续波次（只有方向与人数，阵容到点才知道）
+    var rest=[];
+    for(var w2=1;w2<plan.length;w2++){
+      rest.push('<span style="color:'+(plan[w2].side<0?'#ffd86b':'#7ff0c4')+'">第 '+(w2+1)+' 波 从'+(plan[w2].side<0?'左':'右')+' · '+plan[w2].count+' 名</span>');
+    }
+    if(rest.length){
+      h+='<div class="txt" style="color:#7f8da8">'+rest.join('<br>')+'<br><span style="color:#5c6b85">（方向与人数会变，阵容进场才知道）</span></div>';
+    }
   } else {
     h+='<div class="txt" style="color:#7f8da8">白天没有情报 · 黄昏时会刷新第一波的方位与阵容。</div>';
   }
@@ -1307,15 +1998,27 @@ function pickEnemyType(){
   if(t==='cyborg'&&Math.random()>0.6) t='gang';
   return t;
 }
-function planWave(){
+function planWaveAt(idx){
   var count=2+Math.floor(G.day/3);
-  var side=(G.wavesLeft%2===0)?1:-1;
+  // 第一晚只从右边来；第二天起左右交替（第 1 波右、第 2 波左…）
+  var side=(G.day<=1)?1:((idx%2===0)?1:-1);
   var types=[];
   for(var i=0;i<count;i++) types.push(pickEnemyType());
   return {side:side,count:count,types:types};
 }
+function planWave(){
+  return planWaveAt(0);
+}
+// 预演整晚：第一晚全从右边；之后第 1 波右、第 2 波左……交替
+function planNight(){
+  var total=waveCount(), out=[];
+  for(var i=0;i<total;i++) out.push(planWaveAt(i));
+  return out;
+}
 function spawnWave(){
-  var plan=(G.wavesLeft===waveCount()&&G.intel)?G.intel:planWave();
+  var total=(G.plan&&G.plan.length)?G.plan.length:0;
+  var idx=total?Math.max(0,Math.min(total-1,total-G.wavesLeft)):0;
+  var plan=(G.plan&&G.plan[idx])?G.plan[idx]:planWave();
   var count=plan.count;
   var side=plan.side;
   var maxX=slots[slots.length-1].x+30;
@@ -1339,6 +2042,7 @@ function updateEnemies(dt){
     var e=G.enemies[i];
     if(e.hp<=0){
       G.kills++; G.drops+=((ENEMY[e.type]||{}).drop||1);
+      sfx('kill');
       if(e.boss) prestige(2);
       addParts(e.x,GY-8,e.boss?14:6,'#ff5a4a');
       G.enemies.splice(i,1); continue;
@@ -1377,6 +2081,7 @@ function updateEnemies(dt){
         e.cd=0.8;
         tgt.hp-=e.dmg;
         addParts(tgt.x+rr(-6,6),GY-14,2,'#ffb86e');
+        if(!G._smashT||G.tick-G._smashT>0.25){ G._smashT=G.tick; auNoise(0.09,0.13,520,undefined,'lowpass',AU.sfxGain); }
         if(tgt.hp<=0){
           tgt.state='ruin'; tgt.hp=0;
           if(isShop(tgt.kind)&&tgt.staff>0&&!hasNpc('yu')) G.staff=Math.max(0,G.staff-tgt.staff);
@@ -1402,6 +2107,7 @@ function updateEnemies(dt){
       var loss=Math.floor(G.purse*0.15);
       G.purse-=loss; if(loss>0) addParts(p.x,GY-12,6,'#ff6b6b');
       prestige(-3);
+      sfx('hurt');
       G.flash=0.25;
       p.x+=(p.x>=e.x?16:-16);
     }
@@ -1497,6 +2203,7 @@ function updateFighters(dt){
             target.hp-=md1;
             addParts(target.x,GY-12,2,'#ffd86b');
             addDmgNum(target.x,GY-26,md1,'#ffe08a');
+            if(!G._hitT||G.tick-G._hitT>0.085){ G._hitT=G.tick; sfx('hit'); }
           }
         }
       } else if(f.type==='robot'){
@@ -1567,7 +2274,9 @@ function updateProjs(dt){
     var hit=false;
     for(var j=0;j<G.enemies.length;j++){
       var e=G.enemies[j];
-      if(e.x>=lo&&e.x<=hi){ e.hp-=pr.dmg; hit=true; addParts(e.x,pr.y,3,'#ffd86b'); addDmgNum(e.x,GY-26,pr.dmg,'#bfe8ff'); break; }
+      if(e.x>=lo&&e.x<=hi){ e.hp-=pr.dmg; hit=true; addParts(e.x,pr.y,3,'#ffd86b'); addDmgNum(e.x,GY-26,pr.dmg,'#bfe8ff');
+        if(!G._hitT||G.tick-G._hitT>0.085){ G._hitT=G.tick; sfx('hit'); }
+        break; }
     }
     if(hit||pr.life<=0||Math.abs(pr.x)>620) G.projs.splice(i,1);
   }
@@ -1579,6 +2288,7 @@ function updatePhase(dt){
     G.t-=dt*G.speed;
     if(G.t<=0){
       G.phase='dusk'; G.t=DUSK_LEN; G.speed=1;
+      auPhaseBgm();
       onDuskEnter();
     }
   } else if(G.phase==='dusk'){
@@ -1597,6 +2307,8 @@ function updatePhase(dt){
 
 function endNight(homeLost){
   G.phase='settle';
+  G.plan=null;
+  auBgm('off'); sfx(homeLost?'hurt':'win');
   G.enemies.length=0; G.projs.length=0;
   var salary=G.staff*60+G.fighters.length*40;
   var interest=Math.floor(G.vault*0.02*(hasNpc('mei')?3:1));
@@ -1645,6 +2357,10 @@ function newDay(){
   checkNpcSpawns();
   G.enemies.length=0; G.projs.length=0;
   recomputePower(); syncHUD();
+  auPhaseBgm();
+  if(curSlot!==null&&curSlot!==undefined){
+    if(writeSlot(curSlot)) showToast('天亮 · 已自动保存到存档 '+(curSlot+1),'#7ff0c4');
+  }
 }
 
 function gameOver(reason){
@@ -1790,16 +2506,72 @@ if(pBtn) pBtn.addEventListener('click',function(){
 });
 var dBtn=$('deployBtn');
 if(dBtn) dBtn.addEventListener('click',function(){ deployPanel(); });
-var sBtn=$('storyBtn');
-if(sBtn) sBtn.addEventListener('click',function(){ storyPanel(); });
+var mBtn=$('menuBtn');
+if(mBtn) mBtn.addEventListener('click',function(){ mainMenu(); });
 var nChip=$('npcChip');
 if(nChip) nChip.addEventListener('click',function(){ npcPanel(); });
 window.__syncPauseBtn=function(){ G.userPaused=false; syncPauseBtn(); };
-$('helpBtn').addEventListener('click',function(){ helpPanel(); });
+
+
+// ---------- 开场页 / 选档页 ----------
+(function(){
+  function bind(id,fn){ var e=$(id); if(e) e.addEventListener('click',fn); }
+  bind('ttStart',function(){ auInit(); auResume(); sfx('click'); showSlots(); });
+  bind('ttHelp',function(){ sfx('click'); helpPanel(); });
+  bind('ttAudio',function(){
+    auInit(); auResume();
+    if(AU.bgm&&AU.sfx){ auSetBgm(false); auSetSfx(false); }
+    else { auSetBgm(true); auSetSfx(true); }
+    sfx('click');
+    showTitle();
+  });
+  bind('slBack',function(){ sfx('back'); showTitle(); });
+  var list=$('slList');
+  if(list) list.addEventListener('click',function(e){
+    var t=e.target, del=null, card=null;
+    while(t && t!==list){
+      if(t.dataset){
+        if(t.dataset.del!==undefined) del=t;
+        if(t.dataset.slot!==undefined) card=t;
+      }
+      t=t.parentNode;
+    }
+    if(del){
+      var di=parseInt(del.dataset.del,10);
+      if(del.dataset.confirm==='1'){
+        deleteSlot(di); sfx('back'); renderSlots();
+      } else {
+        del.dataset.confirm='1'; del.textContent='确认删除';
+        setTimeout(function(){
+          if(!del) return;
+          del.dataset.confirm=''; del.textContent='删除';
+        },2600);
+      }
+      return;
+    }
+    if(card){
+      var idx=parseInt(card.dataset.slot,10);
+      auInit(); auResume();
+      if(readSlot(idx)) loadGame(idx); else newGame(idx);
+    }
+  });
+})();
 $('flipBtn').addEventListener('click',function(){
   gameEl.classList.toggle('alt');
 });
 installTouch();
+// 浏览器要求用户手势后才能出声：第一次点屏幕就把音频引擎拉起来
+(function(){
+  function wake(){
+    auInit();
+    document.removeEventListener('pointerdown',wake);
+    document.removeEventListener('touchstart',wake);
+    document.removeEventListener('keydown',wake);
+  }
+  document.addEventListener('pointerdown',wake,{passive:true});
+  document.addEventListener('touchstart',wake,{passive:true});
+  document.addEventListener('keydown',wake);
+})();
 
 // ============================== 动态教程 ==============================
 // 直接在游戏画面里用箭头 + 光圈 + 气泡指引，玩家做到哪一步就前进到哪一步
@@ -1958,7 +2730,10 @@ var lastObj='';
 var TUTDONE=false;
 function objectiveText(){
   if(G.phase==='dusk'&&G.intel&&G.intel.count){
-    return '<span class="step">黄昏</span> 敌人从<b>'+(G.intel.side<0?'左':'右')+'</b>边来 · '+G.intel.count+' 名 · '+typeNames(G.intel.types)+(G.fighters.length?' · <b>右上「布防」</b>':'');
+    var pn=(G.plan&&G.plan.length)?G.plan.length:1;
+    var other='';
+    if(pn>1) other=' · 之后还有 <b>'+(pn-1)+'</b> 波（两边交替）';
+    return '<span class="step">黄昏</span> 第 1 波从<b>'+(G.intel.side<0?'左':'右')+'</b>边来 · '+G.intel.count+' 名 · '+typeNames(G.intel.types)+other+(G.fighters.length?' · <b>右上「布防」</b>':'');
   }
   var builtShops=countShops();
   var building=0;
@@ -2011,6 +2786,7 @@ function helpPanel(){
   h+='<div class="txt"><b>7. 输赢</b><br><b>唯一失败条件：威望归零。</b>建造和升级涨威望，被砸和被打掉威望。钱能赚回来，威望要好几天的正常营业才修得回来。</div>';
   h+='<div class="txt" style="color:#ffd86b"><b>时间</b><br>白天 200 秒 → 黄昏 45 秒（可跳过）→ 夜晚 150 秒。三段都可以 1×/2×/4× 加速。</div>';
   h+='<div class="txt" style="color:#8fd3ff"><b>街史（剧情）</b><br>右上「街史」是这条街的剧情档案：<b>五幕 + 四个结局</b>。它<b>只是补充</b>，不看也能照常经营；不看不会少赚一分钱，也不会影响胜负。结局 A 要你自己走到中枢门前才会发生。</div>';
+  h+='<div class="txt" style="color:#5c6b85;font-size:0.9em;margin-top:4px">素材：画面全部程序化绘制；背景音乐 「Retro Synthwave Loops」 by Tomasz Kucza（CC BY 4.0）。</div>';
   h+='<div class="foot"><button class="btn" data-act="close">知道了</button>'+(tutActive?'<button class="btn" data-act="skipTut">跳过教程</button>':'')+'</div>';
   openPanel(h);
 }
@@ -2116,6 +2892,19 @@ var F3={
  '-':'.../.../###/.../...','.':'.../.../.../.../.#.',':':'.../.#./.../.#./...',
  '/':'..#/..#/.#./#../#..',' ':'.../.../.../.../...','+':'.../.#./###/.#./...','!':'.#./.#./.#./.../.#.'
 };
+// 中文招牌：用画布字体（像素字体只有 ASCII），带描边保证在霓虹底色上可读
+function textCN(x,y,str,col,size){
+  if(!str) return;
+  var px=size||10;
+  ctx.save();
+  ctx.font=px+'px "Microsoft YaHei","PingFang SC","Hiragino Sans GB","Noto Sans SC",sans-serif';
+  ctx.textAlign='center';
+  ctx.textBaseline='middle';
+  try{ ctx.letterSpacing=Math.max(0,px*0.06).toFixed(2)+'px'; }catch(e){}
+  ctx.fillStyle=col;
+  ctx.fillText(str, Math.round(x+ox), Math.round(y));
+  ctx.restore();
+}
 function text3(x,y,s,col){
   x=Math.round(x); y=Math.round(y);
   for(var i=0;i<s.length;i++){
@@ -2207,6 +2996,14 @@ function drawSky(){
       SA(sunX-hw,34+sy2,hw*2,1,tone,sa*0.92);
     }
     SA(sunX-16,40,32,4,'#ff8f52',0.12*sa);
+    // 日冕（三层同心柔光）
+    for(var cr2=0;cr2<3;cr2++){
+      var rr3=13+cr2*4;
+      for(var cy3=-rr3;cy3<=rr3;cy3+=2){
+        var hw3=Math.round(Math.sqrt(Math.max(0,rr3*rr3-cy3*cy3)));
+        SA(sunX-hw3,34+cy3,hw3*2,1,'#ffb06a',(0.05-cr2*0.012)*sa);
+      }
+    }
   }
   if(night>0.1){
     var mn=clamp(night*1.25,0,1);
@@ -2224,6 +3021,44 @@ function drawSky(){
   var fx=-24+t2*(VW+48);
   SA(fx,20,6,1,'#3ee9ff',0.45*night);
   glowS(fx+5,20,6,'#3ee9ff',0.4*night);
+
+  // ---- 云带：三层软边横条，缓慢漂移 ----
+  var cl=[
+    {y:22,w:86,v:2.4,o:0,a:0.085,c:'#a8c6ee'},
+    {y:38,w:124,v:1.5,o:120,a:0.070,c:'#c2d6f0'},
+    {y:54,w:70,v:2.0,o:240,a:0.060,c:'#9ab8de'}
+  ];
+  for(var ci2=0;ci2<cl.length;ci2++){
+    var cc=cl[ci2];
+    var cx4=((G.tick*cc.v+cc.o)%(VW+cc.w*2))-cc.w;
+    var fade=0.7+0.3*Math.sin(G.tick*0.3+ci2);
+    for(var cr=0;cr<4;cr++){
+      var inw=cc.w-cr*Math.round(cc.w*0.20);
+      SA(cx4+cr*Math.round(cc.w*0.10),cc.y+cr,inw,1,cc.c,cc.a*(1-cr*0.22)*fade*(1-night*0.5));
+    }
+  }
+  // ---- 空中广告飞艇（白天/黄昏缓慢掠过） ----
+  if(night<0.45){
+    var bp=((G.tick*3.6)%(VW+240))-120;
+    var by2=22+Math.round(Math.sin(G.tick*0.6)*1);
+    var ba=clamp(1-night*2,0,1)*0.85;
+    // 艇身（上亮下暗）
+    S(bp,by2+2,24,4,'#131c2e');
+    S(bp+1,by2+1,22,1,'#1d2942');
+    S(bp+2,by2,20,1,'#28364f');
+    S(bp+1,by2+6,22,1,'#0a101c');
+    S(bp-2,by2+3,3,3,'#0d1424');
+    S(bp+24,by2+3,3,3,'#0d1424');
+    // 尾翼 + 吊舱
+    S(bp+25,by2+4,3,1,'#33465e');
+    S(bp+12,by2+7,4,2,'#0a101c');
+    // 侧面广告灯带
+    SA(bp+4,by2+3,14,1,'#3ee9ff',0.55*ba);
+    glowS(bp+11,by2+3,10,'#3ee9ff',0.18*ba);
+    // 航行灯闪烁
+    if(Math.sin(G.tick*3.1)>0.2) SA(bp+26,by2+4,1,1,'#ff5a4a',0.9*ba);
+    if(Math.sin(G.tick*3.1+2)>0.2) SA(bp-3,by2+4,1,1,'#7ff0c4',0.8*ba);
+  }
 }
 
 // ============================== 远景天际线 ==============================
@@ -2265,8 +3100,14 @@ function drawSkyline(par,baseY,scale,night,dim){
       var hh=Math.round(b.h*scale);
       var top=Math.round(baseY-hh);
       S(x,top,b.w,hh,dim?b.tone:'#0d1426');
-      S(x,top,b.w,1,rgba('#4d6288',dim?0.35:0.55));
-      SA(x+b.w-2,top,2,hh,'#000',0.25);
+      // 顶部边缘光（模拟天空补光）
+      S(x,top,b.w,1,rgba('#6f8cb8',dim?0.42:0.62));
+      SA(x+1,top+1,b.w-2,1,rgba('#4d6288',dim?0.16:0.28));
+      // 右侧体积阴影 + 底部压暗
+      SA(x+b.w-2,top,2,hh,'#000',0.30);
+      SA(x,top+hh-3,b.w,3,'#000',0.18);
+      // 楼身两侧竖向明暗（受光在左）
+      SA(x,top+1,1,hh-2,rgba('#8fa8ce',dim?0.05:0.09));
       var lit=0.14+0.8*night;
       for(var wy=4;wy<hh-4;wy+=5){
         for(var wx=2;wx<b.w-2;wx+=4){
@@ -2327,67 +3168,151 @@ function drawHoloAds(night){
 // ============================== 地面 ==============================
 function drawGround(){
   R(-700,GY,1400,VH-GY,'#06080f');
-  // 人行道
+  // ---------- 人行道 ----------
   R(-700,GY,1400,12,'#171e2e');
+  // 铺砖：交错砖缝 + 每块砖的受光/背光
+  for(var ty=0;ty<3;ty++){
+    var ry3=GY+1+ty*4;
+    for(var i=0;i<116;i++){
+      var bxx=-700+i*12+(ty%2?6:0);
+      R(bxx,ry3,1,3,'#0e1421');
+      A(bxx+1,ry3,11,1,'#26314a',0.35);        // 砖上沿受光
+      A(bxx+1,ry3+3,11,1,'#080d16',0.55);      // 砖下沿阴影
+    }
+  }
+  A(-700,GY+1,1400,12,'#000',0.06);
   R(-700,GY,1400,1,'#3a4a68');
-  for(var i=0;i<110;i++){
-    var bx=-680+i*13;
-    R(bx,GY+1,1,10,'#111726');
-    if(i%2===0) A(bx+1,GY+3,12,1,'#1e2740',0.4);
+  A(-700,GY+1,1400,1,'#0a0f18',0.5);
+  // 裂缝与污渍
+  for(var ck=0;ck<7;ck++){
+    var cx3=-660+ck*200+((ck*57)%90);
+    A(cx3,GY+2,1,3,'#080d16',0.7);
+    A(cx3+1,GY+4,1,3,'#080d16',0.5);
+    A(cx3+2,GY+6,2,1,'#080d16',0.35);
+  }
+  for(var gm=0;gm<26;gm++){
+    var gmx=-680+((gm*137)%1360);
+    A(gmx,GY+2+((gm*31)%8),1,1,'#0b1018',0.55);
   }
   // 积水（霓虹倒影的载体）
   for(var p=0;p<9;p++){
     var px2=-600+p*140+((p*37)%40);
     A(px2,GY+6,26,4,'#0a1018',0.55);
     A(px2+3,GY+7,18,2,'#12203a',0.5);
+    A(px2+5,GY+6,8,1,'#3a5d8a',0.30);          // 水面反光
+    A(px2+9,GY+9,6,1,'#2a4a72',0.22);
   }
-  // 路缘
+  // 路缘石
   R(-700,GY+11,1400,1,'#2a3a55');
+  A(-700,GY+11,1400,1,'#4a5f80',0.35);
   R(-700,GY+12,1400,1,'#0a0f18');
+  A(-700,GY+13,1400,1,'#000000',0.4);
   // 排水格栅
   for(var g=0;g<10;g++){
     var gx=-660+g*140;
-    R(gx,GY+6,14,5,'#080c14');
-    for(var s=0;s<4;s++) R(gx+1,GY+6+s,12,1,'#1a2334');
+    R(gx-1,GY+6,16,7,'#0c1220');
+    R(gx,GY+7,14,5,'#060a12');
+    for(var s=0;s<5;s++) R(gx+1,GY+7+s,12,1,'#1e2a40');
+    for(var s2=0;s2<3;s2++) A(gx+2+s2*5,GY+7,1,5,'#212e46',0.8);
   }
   // 井盖
-  R(152,GY+5,11,6,'#131a26');
-  R(153,GY+6,9,4,'#0b1018');
-  // 地下层
+  R(151,GY+4,13,8,'#1a2233');
+  R(152,GY+5,11,6,'#0d1420');
+  R(154,GY+6,7,4,'#161f30');
+  for(var mh=0;mh<3;mh++) A(154,GY+6+mh,7,1,'#2a3a55',0.6);
+  // 街边小物：灭火栓 / 垃圾袋 / 护柱
+  (function(){
+    var hx0=-118;
+    R(hx0,GY-7,4,7,'#7a2a2a'); R(hx0-1,GY-8,6,2,'#a03a3a'); R(hx0,GY-3,4,1,'#5a1e1e');
+    A(hx0+1,GY-7,1,6,'#c05a4a',0.6);
+    var tx0=236;
+    R(tx0,GY-5,7,5,'#1a2334'); R(tx0+1,GY-6,5,2,'#222c42'); A(tx0+1,GY-5,5,1,'#33465e',0.6);
+    var bx0=-330;
+    for(var bb=0;bb<2;bb++){ R(bx0+bb*9,GY-6,3,6,'#2a3550'); A(bx0+bb*9,GY-6,1,6,'#4a5f80',0.5); R(bx0+bb*9-1,GY-7,5,1,'#5a7ba8'); }
+  })();
+  // ---------- 地下剖面 ----------
   var uy=GY+14;
-  // 土石层
-  R(-700,uy,1400,VH-uy,'#0a0a10');
-  R(-700,uy,1400,2,'#141320');
-  for(var r1=0;r1<64;r1++){
-    var rxp=-700+((r1*97)%1400), ryp=uy+4+((r1*53)%(VH-uy-6));
-    A(rxp,ryp,2,1,r1%3?'#15141f':'#1b1a26',0.9);
+  // 路面结构层：沥青 → 碎石 → 土
+  R(-700,uy,1400,VH-uy,'#121119');
+  R(-700,uy,1400,3,'#1c2233');           // 沥青
+  R(-700,uy,1400,1,'#2a3450');
+  for(var ag=0;ag<170;ag++){
+    var agx=-700+((ag*149)%1400);
+    A(agx,uy+1+((ag*7)%2),1,1,ag%3?'#39435c':'#252d42',0.7);
   }
-  // 电缆束（横向）
-  R(-700,uy+6,1400,2,'#121a28');
-  R(-700,uy+6,1400,1,'#1c2942');
-  R(-700,uy+11,1400,3,'#0d1520');
-  R(-700,uy+11,1400,1,'#16202f');
-  R(-700,uy+17,1400,2,'#0b111a');
-  // 横向线缆束（带细高光）
-  R(-700,uy+22,1400,1,'#0f1622');
-  R(-700,uy+27,1400,1,'#0c121c');
-  for(var cb=0;cb<26;cb++){
-    var cbx=-690+cb*54;
-    A(cbx,uy+21,14,1,'#1a2437',0.8);
-    A(cbx+4,uy+26,9,1,'#18202f',0.7);
+  R(-700,uy+3,1400,2,'#191d29');          // 碎石垫层
+  for(var st2=0;st2<150;st2++){
+    var stx=-700+((st2*113)%1400);
+    A(stx,uy+3+((st2*5)%2),1,1,st2%2?'#2b3040':'#20242f',0.85);
   }
-  // 竖向支管 + 接头
-  for(var t=0;t<7;t++){
-    var tx=-600+t*200;
-    R(tx,uy+2,2,VH-uy-3,'#0b111b');
-    R(tx-1,uy+7,4,3,'#101827');
+  A(-700,uy+5,1400,1,'#07080e',0.9);
+  // 土壤：颗粒 + 越深越暗
+  for(var rk=0;rk<110;rk++){
+    var rkx=-700+((rk*173)%1400), rky=uy+6+((rk*67)%(VH-uy-8));
+    A(rkx,rky,1+((rk%2)),1,rk%4?'#191822':'#24222f',0.5+rk%3*0.15);
   }
-  for(var jb=0;jb<5;jb++){
-    var jx=-480+jb*280;
-    R(jx,uy+13,9,6,'#101827');
-    R(jx+1,uy+14,7,4,'#070c14');
-    A(jx+2,uy+15,1,1,'#3ee9ff',0.4);
-    A(jx+5,uy+15,1,1,'#ffc857',0.3);
+  dithV(-700,uy+8,1400,VH-uy-9,'#000000',0.04,0.42);
+  A(-700,uy+16,1400,1,'#1d1b26',0.5);     // 岩层分界
+
+  // 主电缆槽（带卡箍 + 三条发光缆芯）
+  var dy=uy+8;
+  R(-700,dy-1,1400,7,'#0b0f18');
+  R(-700,dy,1400,5,'#151c2a');
+  R(-700,dy,1400,1,'#26334a');
+  // 缆芯：主青 + 次洋红，低亮度断续高光
+  for(var cc3=0;cc3<2;cc3++){
+    var cy4=dy+1+cc3*2;
+    var col3=['#3ee9ff','#ff3fa4'][cc3];
+    A(-700,cy4,1400,1,col3,0.10);
+    for(var ds=0;ds<24;ds++){
+      var dsx=-690+ds*60+((cc3*29)%30);
+      A(dsx,cy4,7,1,col3,0.30);
+      if(ds%9===0) glow(dsx+3,cy4,6,col3,0.07);
+    }
+  }
+  // 卡箍
+  for(var cb2=0;cb2<17;cb2++){
+    var cbx2=-696+cb2*84;
+    R(cbx2,dy-2,3,9,'#2b3750');
+    A(cbx2,dy-2,3,1,'#46597c',0.9);
+    A(cbx2+3,dy+7,2,1,'#080c14',0.9);
+  }
+
+  // 主排水管
+  var py4=uy+19;
+  R(-700,py4-3,1400,1,'#33425c');
+  R(-700,py4-2,1400,6,'#1a2334');
+  R(-700,py4-2,1400,1,'#46597c');
+  A(-700,py4+1,1400,2,'#0d1420',0.8);
+  R(-700,py4+4,1400,1,'#070b12');
+  for(var pb=0;pb<16;pb++){
+    var pbx=-690+pb*88;
+    R(pbx,py4-4,2,9,'#33425c');
+    A(pbx,py4-4,2,1,'#5b7196',0.9);
+    if(pb%3===0) A(pbx+3,py4+5,1,2,'#2a5a72',0.55);
+  }
+  // 竖向落水管 + 接线盒
+  for(var t=0;t<8;t++){
+    var tx=-620+t*176;
+    R(tx,uy+5,2,VH-uy-6,'#1a2334');
+    A(tx,uy+5,1,VH-uy-6,'#2b3a55',0.7);
+    R(tx-1,uy+13,4,3,'#26334a');
+  }
+  for(var jb=0;jb<6;jb++){
+    var jx=-500+jb*232;
+    R(jx,uy+24,10,7,'#1e2839');
+    R(jx+1,uy+25,8,5,'#0a0f18');
+    A(jx+2,uy+26,1,1,'#3ee9ff',0.8);
+    A(jx+4,uy+26,1,1,'#ffc857',0.6);
+    A(jx+6,uy+26,1,1,'#7ff0c4',0.5);
+    A(jx,uy+24,10,1,'#33425c',0.9);
+  }
+  // 从路面漏下来的光（排水格栅下方）
+  for(var ls2=0;ls2<10;ls2++){
+    var lgx=-660+ls2*140+7;
+    var gra=0.10+0.05*Math.sin(G.tick*1.4+ls2);
+    A(lgx-3,uy,7,5,'#5f9fd0',gra);
+    A(lgx,uy+5,1,4,'#3a6a96',gra*0.7);
   }
 }
 
@@ -2408,13 +3333,13 @@ function drawUtilities(){
 }
 
 var SHOP_ART={
-  conv: {neon:'#3ee9ff', neon2:'#7bfff0', glass:'#0b2130', w:39, h0:74, sign:'24H', label:'MART'},
-  tea:  {neon:'#ff3fa4', neon2:'#ff9cc8', glass:'#280e1c', w:39, h0:72, sign:'TEA', label:'BAR'},
-  food: {neon:'#ffc857', neon2:'#ffe9a8', glass:'#25140a', w:40, h0:74, sign:'EAT', label:'NOODLE'},
-  hotel:{neon:'#9a6bff', neon2:'#c9a8ff', glass:'#1d1430', w:40, h0:84, sign:'HOTEL', label:'ROOM'},
-  cyber:{neon:'#5ad1ff', neon2:'#b18cff', glass:'#141033', w:40, h0:78, sign:'NET', label:'NET'},
-  med:  {neon:'#3dffa8', neon2:'#a8ffe0', glass:'#0d2a26', w:38, h0:70, sign:'MED', label:'CLINIC'},
-  pawn: {neon:'#9a6bff', neon2:'#c9a8ff', glass:'#171029', w:38, h0:70, sign:'$', label:'PAWN'}
+  conv: {neon:'#3ee9ff', neon2:'#7bfff0', glass:'#0b2130', w:39, h0:74, cn:'便利店'},
+  tea:  {neon:'#ff3fa4', neon2:'#ff9cc8', glass:'#280e1c', w:39, h0:72, cn:'奶茶店'},
+  food: {neon:'#ffc857', neon2:'#ffe9a8', glass:'#25140a', w:40, h0:74, cn:'小饭馆'},
+  hotel:{neon:'#9a6bff', neon2:'#c9a8ff', glass:'#1d1430', w:40, h0:84, cn:'旅馆'},
+  cyber:{neon:'#5ad1ff', neon2:'#b18cff', glass:'#141033', w:40, h0:78, cn:'网吧'},
+  med:  {neon:'#3dffa8', neon2:'#a8ffe0', glass:'#0d2a26', w:38, h0:70, cn:'药房'},
+  pawn: {neon:'#9a6bff', neon2:'#c9a8ff', glass:'#171029', w:38, h0:70, cn:'当铺'}
 };
 
 function drawReflections(night){
@@ -2554,11 +3479,10 @@ function drawHome(){
   text3(x-w/2-7,sy+28,'O',  '#ff3fa4');
   glow(x-w/2-5,sy+24,18,'#ff3fa4',0.14+0.10*night);
   // 主招牌
-  R(x-w/2+4,top+5,w-18,14,'#0b0f18');
-  R(x-w/2+4,top+5,w-18,1,rgba('#ffc857',0.85));
-  R(x-w/2+4,top+17,w-18,1,rgba('#ffc857',0.4));
-  text3(x-w/2+9,top+7,'NEON', '#ffe9a8');
-  text3(x-w/2+9,top+13,'HOTEL', '#c9975a');
+  R(x-w/2+1,top+5,w-2,14,'#0b0f18');
+  R(x-w/2+1,top+5,w-2,1,rgba('#ffc857',0.85));
+  R(x-w/2+1,top+18,w-2,1,rgba('#ffc857',0.4));
+  textCN(x, top+12, '零点旅馆', '#ffe9a8', 9.5);
   glow(x-4,top+9,w*0.36,'#ffc857',0.10+0.08*night);
   // 店面
   R(x-w/2,GY-32,w,32,'#0b111c');
@@ -2590,7 +3514,7 @@ function drawHome(){
   R(x-w/2-3,GY-33,w+6,2,'#1a2334');
   R(x-w/2-2,GY-33,w+4,1,'#38496a');
   if(G.homeHP<G.homeMax){
-    var bw=w-6, bx=x-bw/2, by=top-20;
+    var bw=w-6, bx=x-bw/2, by=Math.max(36,top-20);
     R(bx-1,by-1,bw+2,5,'#080c14');
     R(bx,by,bw,3,'#2a1016');
     R(bx,by,bw*clamp(G.homeHP/G.homeMax,0,1),3,'#4fd88a');
@@ -2614,11 +3538,10 @@ function drawHardware(){
   for(var i=0;i<13;i++) R(x-w/2+3,top+21+i*3,w-6,2,i%2?'#1e2739':'#161e2c');
   R(x-w/2+3,top+20,w-6,1,'#2b3a55');
   // 招牌
-  R(x-w/2,top+3,w,13,'#0b0f16');
+  R(x-w/2,top+3,w,14,'#0b0f16');
   R(x-w/2+1,top+4,w-2,1,rgba('#ffc857',0.85));
-  R(x-w/2+1,top+14,w-2,1,rgba('#ffc857',0.45));
-  text3(x-w/2+7,top+6,'WU JIN', '#ffd86b');
-  text3(x-w/2+7,top+12,'PARTS', '#c9975a');
+  R(x-w/2+1,top+16,w-2,1,rgba('#ffc857',0.45));
+  textCN(x, top+10.5, '五金店', '#ffd86b', 10);
   glow(x,top+8,w*0.4,'#ffc857',0.12);
   // 侧边管道
   for(var k=0;k<2;k++) R(x+w/2-7+k*3,top+18,2,42,'#28344c');
@@ -2659,16 +3582,34 @@ function drawShop(st){
   // 墙体
   R(x-w/2,top,w,h,P.wall1);
   R(x-w/2,top,w,2,P.wall3);
+  // ---- 墙面材质：面板接缝 / 雨痕 / 右侧体积阴影 / 墙根积垢 ----
+  for(var px3=7;px3<w-5;px3+=9) A(x-w/2+px3,top+21,1,h-22,'#0a1222',0.5);
+  for(var px4=7;px4<w-5;px4+=9) A(x-w/2+px4+1,top+21,1,h-22,'#2a3a55',0.16);
+  A(x-w/2+3,top+22,w-6,1,'#0a1222',0.35);
+  for(var rn=0;rn<3;rn++){
+    var rx3=x-w/2+6+((rn*13)%(w-12));
+    A(rx3,top+23,1,((rn*7)%9)+5,'#060b14',0.30);
+    A(rx3+1,top+23,1,((rn*7)%7)+3,'#060b14',0.18);
+  }
+  dith(x+w/2-7,top+21,5,h-22,'#060b14',0.28);
+  dithV(x-w/2+2,GY-14,w-4,13,'#04080f',0.08,0.62);
   A(x-w/2,top,2,h,'#1a2438',0.95);
   A(x+w/2-2,top,2,h,'#070c14',0.9);
+  // 霓虹对墙面的环境光溢出
+  if(!off){
+    A(x-w/2+1,top+2,w-2,20,neon,0.05);
+    A(x-w/2+1,top+18,w-2,6,neon2,0.03);
+    dithV(x-w/2+1,top+2,w-2,10,neon,0.05,0.10);
+  }
+  // 屋顶女儿墙
+  R(x-w/2-1,top-3,w+2,3,'#0a1120');
+  R(x-w/2-1,top-3,w+2,1,'#3a4d6e');
+  A(x-w/2-1,top,2,1,'#0a1120',1);
   // 招牌
   R(x-w/2+1,top+4,w-2,14,'#070b12');
   R(x-w/2+1,top+4,w-2,1,rgba(nc,0.9));
   R(x-w/2+1,top+17,w-2,1,rgba(nc,0.45));
-  var t1=art.sign, t2=art.label;
-  var w1=text3W(t1), w2=text3W(t2);
-  text3(x-w1/2,top+6,t1, off?'#2c3342':neon2);
-  if(w2<=w-8) text3(x-w2/2,top+12,t2, off?'#232937':rgba(nc,0.9));
+  textCN(x, top+11.5, art.cn, off?'#38404f':neon2, 10);
   if(!off) glow(x,top+11,w*0.5,nc,0.12*flick+0.05);
   // 雨棚
   var awnC=st.kind==='conv'?'#123241':(st.kind==='tea'?'#35102b':(st.kind==='food'?'#35220e':(st.kind==='hotel'?'#241a3a':(st.kind==='cyber'?'#141a3a':(st.kind==='med'?'#0e2a24':'#20183a')))));
@@ -2680,11 +3621,20 @@ function drawShop(st){
   if(noInc){
     for(var d2=0;d2<2;d2++){
       var dwx=x-w/2+7+d2*16;
-      R(dwx-1,bandY,12,bandH,'#060b14');
+      // 窗套：外框 / 窗台 / 过梁
+      R(dwx-2,bandY-1,14,bandH+2,'#0a1120');
+      R(dwx-2,bandY-1,14,1,'#3a4d6e');
+      R(dwx-2,bandY+bandH,14,1,'#33465e');
+      R(dwx-2,bandY+bandH+1,14,1,'#060b14');
       R(dwx,bandY+1,10,bandH-2,night?'#2a1c0c':'#10283c');
       R(dwx+1,bandY+2,8,bandH-4,night?'#ffcf6b':'#5f9fd0');
-      A(dwx+1,bandY+2,8,4,'#ffffff',0.10);
-      A(dwx+5,bandY+2,1,bandH-4,'#081018',0.7);
+      A(dwx+1,bandY+2,8,3,'#ffffff',0.14);
+      A(dwx+1,bandY+2,1,bandH-4,'#ffffff',0.08);
+      // 窗棂
+      A(dwx+5,bandY+2,1,bandH-4,'#081018',0.72);
+      A(dwx+1,bandY+Math.floor(bandH/2),8,1,'#081018',0.62);
+      // 部分窗拉上卷帘
+      if(d2===1) A(dwx+1,bandY+2,8,5,'#14324a',0.55);
     }
   } else {
     var cap=Math.max(1,st.level);
@@ -2693,6 +3643,10 @@ function drawShop(st){
     var wx0=x-Math.floor(total/2);
     for(var wi=0;wi<cap;wi++){
       var wx3=wx0+wi*(ww+gp);
+      R(wx3-2,bandY-2,ww+4,bandH+4,'#0a1120');
+      R(wx3-2,bandY-2,ww+4,1,'#3a4d6e');
+      R(wx3-2,bandY+bandH+1,ww+4,1,'#2a3a55');
+      R(wx3-2,bandY+bandH+2,ww+4,1,'#050a12');
       R(wx3-1,bandY-1,ww+2,bandH+2,'#060b14');
       if(off){
         R(wx3,bandY,ww,bandH,'#0c1220');
@@ -2734,6 +3688,19 @@ function drawShop(st){
       R(x-w/2+5,gy0+6+r2*7,w-14,1,rgba(neon2,0.35));
       for(var it=0;it<4;it++) R(x-w/2+6+it*5,gy0+4+r2*7,2,2,rgba(neon2,0.4));
     }
+    // 内部家具剪影：冰柜 / 收银台
+    R(x-w/2+5,GY-9,9,6,'#04101a');
+    A(x-w/2+5,GY-9,9,1,rgba(neon2,0.45),0.6);
+    A(x-w/2+7,GY-8,1,4,rgba(neon2,0.30),0.5);
+    R(x+w/2-13,GY-11,8,8,'#050f18');
+    R(x+w/2-12,GY-11,6,1,rgba(neon2,0.5),0.5);
+    // 玻璃窗棂
+    var mullN=Math.max(2,Math.floor((w-6)/11));
+    for(var mu=1;mu<mullN;mu++) A(x-w/2+3+Math.round(mu*(w-6)/mullN),gy0+1,1,gh-2,'#05090f',0.9);
+    // 玻璃反光（斜向亮条）
+    A(x-w/2+6,gy0+2,2,gh-6,'#ffffff',0.10);
+    A(x-w/2+10,gy0+3,1,gh-10,'#ffffff',0.06);
+    A(x+w/2-9,gy0+2,1,gh-8,'#ffffff',0.05);
   }
   A(x-w/2+4,gy0+2,2,gh-4,'#ffffff',0.06);
   A(x+w/2-6,gy0+2,1,gh-4,'#ffffff',0.04);
@@ -2782,10 +3749,26 @@ function drawShop(st){
     R(x+13,bandY+3,2,2,rgba(neon,0.85));
     R(x+11,bandY+6,2,2,rgba(neon,0.85));
   }
-  // 空调外机
-  R(x+w/2-10,gy0+2,7,6,'#1e2739');
-  R(x+w/2-9,gy0+3,5,1,'#33465e');
-  R(x+w/2-9,gy0+5,5,1,'#33465e');
+  // 空调外机（含支架与滴水管）
+  R(x+w/2-12,gy0+1,9,8,'#141d2c');
+  R(x+w/2-11,gy0+2,7,6,'#22304a');
+  R(x+w/2-11,gy0+2,7,1,'#3a4d6e');
+  for(var ac=0;ac<3;ac++) A(x+w/2-11,gy0+3+ac*2,7,1,'#0d1524',0.8);
+  A(x+w/2-10,gy0+3,1,5,'#ffffff',0.10);
+  R(x+w/2-13,gy0+8,11,1,'#2a3a55');
+  A(x+w/2-12,gy0+9,1,Math.max(2,GY-gy0-9),'#1a2436',0.7);   // 滴水管
+  // 墙面配电箱 + 走线
+  R(x-w/2+4,bandY+bandH+4,6,5,'#0e1626');
+  R(x-w/2+5,bandY+bandH+5,4,3,'#060b14');
+  A(x-w/2+5,bandY+bandH+5,1,1,'#7ff0c4',0.7);
+  A(x-w/2+10,bandY+bandH+4,1,7,'#0b1220',0.9);
+  // 屋顶天线
+  if(st.level>=2){
+    R(x-w/2+6,top-11,1,8,'#2a3a55');
+    R(x-w/2+4,top-11,5,1,'#3a4d6e');
+    R(x-w/2+3,top-9,3,1,'#2a3a55');
+    A(x-w/2+6,top-12,1,1,'#ff5a4a',0.85);
+  }
   // 屋顶灯箱
   if(st.level>=2&&st.stock>0){
     R(x-w/2+4,top-8,w-8,7,'#080c14');
@@ -3008,10 +3991,11 @@ function drawStructure(st){
 // ============================== 人形渲染 ==============================
 // 轮廓 → 腿 → 躯干（上宽下窄）→ 手臂（外挂）→ 头（脸+发/帽+护目镜）
 function OB(x,y,w,h,c){ R(x-1,y-1,w+2,h+2,c||'#0a0f1c'); }
+// 三段明暗 + 分部件描边的人形
+// 轮廓改用各部件自身的暗色（而不是统一黑边），边缘再做 1px 受光/背光处理
 function drawHuman(o){
   var x=o.x, y=o.y===undefined?GY:o.y, f=o.face>0?1:-1;
   var step=Math.round(Math.sin(o.walk||0)*2);
-  var OL=o.ol||'#0a0f1c';
   var skin=o.skin||P.skin, skinD=o.skinD||P.skinD, skinL=o.skinL||P.skinL;
   var coat=o.coat||P.coat, coatD=o.coatD||P.coatD, coatL=o.coatL||P.coatL;
   var pants=o.pants||coatD, boots=o.boots||'#080c14';
@@ -3019,167 +4003,336 @@ function drawHuman(o){
   var neon=o.neon||P.cyan;
   var bulk=o.bulk||0;
   var shrug=o.shrug||0;
-  var tw=11+bulk*2;                       // 肩宽
-  var hw=6+bulk;                          // 头宽
+  var tw=11+bulk*2;                        // 肩宽
+  var hw=6+bulk;                           // 头宽
   y=y+(o.bob||0);
   var tx=x-Math.floor(tw/2), ty=y-25-shrug;   // 躯干左上
   var ay=y-24-shrug;                          // 手臂起点
-  var hx=x+(f>0?1:0)-Math.floor(hw/2), hy=y-33; // 头左上
+  var hx=x+(f>0?1:0)-Math.floor(hw/2), hy=y-34; // 头左上（比旧版高 1px，脸多一行）
   var l1=x-4+Math.round(step*0.4), l2=x+2-Math.round(step*0.4);
   var a1=ay-Math.round(step*0.5), a2=ay+Math.round(step*0.5);
-  shadowAt(x,tw+4,0.42);
-  // ---------- 轮廓 ----------
-  if(o.coatTail) OB(x-8-(f>0?Math.round(step):-Math.round(step)), y-24, 3, 14, OL);
-  OB(l1, y-13, 3, 9, OL);
-  OB(l2, y-13, 3, 9, OL);
-  OB(tx, ty, tw, 12+shrug, OL);
-  OB(tx-2, ay-1, 2, 11, OL);
-  OB(tx+tw, ay-1, 2, 11, OL);
-  OB(hx, hy, hw, 7, OL);
+
+  // 各部件描边色（自身暗色，带一点环境冷调）
+  var oC=dkc(coat), oP=dkc(pants), oS=mix2(skinD,'#2a1a24');
+  var oH=dkc(hair);
+
+  // ---------- 接地阴影（三层软过渡） ----------
+  A(x-tw/2-4, y+1, tw+8, 1, '#000', 0.14);
+  A(x-tw/2-2, y,   tw+4, 1, '#000', 0.28);
+  A(x-tw/2,   y,   tw,   2, '#000', 0.40);
+
   // ---------- 腿 ----------
+  R(l1-1,y-13,3,11, oP);
+  R(l2-1,y-13,3,11, oP);
   R(l1, y-13, 3, 9, pants);
-  R(l1-1, y-4, 4, 4, boots);
-  R(l1-1, y-1, 4, 1, mix2(boots,'#4a5a78'));
   R(l2, y-13, 3, 9, mix2(pants,coatD));
-  R(l2-1, y-4, 4, 4, boots);
-  R(l2-1, y-1, 4, 1, mix2(boots,'#4a5a78'));
-  A(l2, y-12, 1, 8, '#ffffff', 0.06);
+  // 大腿受光边 / 膝弯 / 裤缝
+  R(l1, y-13, 1, 9, lt(pants,0.30));
+  R(l1+1, y-12, 1, 5, '#ffffff', 0.06);
+  A(l1, y-7, 3, 1, '#000000', 0.28);
+  A(l2, y-7, 3, 1, '#000000', 0.28);
+  R(l1+2, y-13, 1, 9, dk(pants,0.35));
+  // 靴子：靴筒 / 鞋头 / 鞋底 / 鞋跟（与裤子拉开色阶）
+  var bt=mix2(boots,'#2b3852');
+  R(l1-1, y-5, 4, 5, bt);
+  R(l2-1, y-5, 4, 5, bt);
+  R(l1-1, y-5, 4, 1, mix2(bt,'#5a6f92'));
+  R(l2-1, y-5, 4, 1, mix2(bt,'#5a6f92'));
+  R(l1+(f>0?2:0), y-3, 2, 2, mix2(bt,'#8098bb'));      // 鞋头高光
+  R(l2+(f>0?2:0), y-3, 2, 2, mix2(bt,'#8098bb'));
+  R(l1-1, y-1, 4, 1, mix2(boots,'#6d84a8'));
+  R(l2-1, y-1, 4, 1, mix2(boots,'#6d84a8'));
+  A(l1-1, y, 4, 1, '#000000', 0.55);
+  A(l2-1, y, 4, 1, '#000000', 0.55);
+
   // ---------- 躯干 ----------
   var th=12+shrug;
-  R(tx, ty, tw, 4, coat);                 // 胸
-  R(tx+1, ty+4, tw-2, 4, coat);           // 腰（内收 1px）
-  R(tx, ty+8, tw-1, th-8, coat);          // 下摆
+  R(tx-1, ty-1, tw+2, th+2, oC);            // 外套描边
+  R(tx, ty, tw, 4, coat);                   // 胸
+  R(tx+1, ty+4, tw-2, 4, coat);             // 腰（内收 1px）
+  R(tx, ty+8, tw-1, th-8, coat);            // 下摆
+  // 三段明暗：顶部受光、右侧背光（按朝向翻转）、下摆压暗
   R(tx, ty, tw, 1, coatL);
-  A(tx+tw-3, ty+1, 3, th-1, coatD, 0.5);
-  A(tx+1, ty+1, 1, th-1, '#ffffff', 0.10);
-  A(tx+2, ty+5, 1, 5, coatD, 0.5);        // 腰部折痕
-  R(tx, y-14, tw, 1, OL);                 // 腰带
-  R(tx, y-13, tw, 1, o.belt||'#3a4a6d');
-  R(tx+2, ty-1, tw-4, 2, coatD);          // 领口
+  A(tx+tw-3, ty+1, 3, th-1, coatD, 0.55);
+  A(tx+1, ty+1, 2, th-2, '#ffffff', 0.14);
+  R(tx+1, ty+1, 1, th-3, lt(coat,0.30));
+  A(tx+2, ty+2, 1, 3, '#ffffff', 0.10);
+  dith(tx+tw-4, ty+1, 2, th-2, coatD, 0.35);
+  // 肩线
+  R(tx+2, ty+1, tw-4, 1, mix2(coatL,coat));
+  // 领口（翻领 V）
+  R(tx+2, ty-1, tw-4, 2, dk(coat,0.3));
   R(tx+2, ty-1, tw-4, 1, coatL);
+  A(tx+Math.floor(tw/2)-(f>0?1:0), ty+1, 1, 3, coatD, 0.9);
+  A(tx+Math.floor(tw/2)-2+(f>0?0:1), ty+2, 1, 1, coatD, 0.7);
+  A(tx+Math.floor(tw/2)+1-(f>0?0:1), ty+2, 1, 1, coatD, 0.7);
+  // 拉链 / 前襟
+  var zx=tx+Math.floor(tw/2);
+  R(zx, ty+4, 1, th-5, mix2(coatD,'#0a1220'));
+  A(zx, ty+4, 1, 2, '#c9d6e6', 0.55);
+  // 口袋
+  A(tx+2, ty+7, 3, 1, coatD, 0.75);
+  A(tx+tw-5, ty+7, 3, 1, coatD, 0.75);
+  // 腰带 + 带扣
+  R(tx, y-14, tw, 1, dk(coat,0.5));
+  R(tx, y-13, tw, 1, o.belt||'#3a4a6d');
+  R(zx-1, y-14, 2, 2, mix2(o.belt||'#3a4a6d','#ffe6a8'));
+  A(zx-1, y-14, 1, 1, '#fff3c8', 0.8);
+  // 下摆褶皱
+  A(tx+2, y-12, 1, 3, coatD, 0.55);
+  A(tx+tw-3, y-12, 1, 3, coatD, 0.55);
+  // 胸口霓虹条
   if(o.chest){
     var cx2=tx+Math.floor(tw/2)-1+(f>0?2:-2);
     R(cx2, ty+4, 1, 4, neon);
+    A(cx2-1, ty+4, 3, 4, neon, 0.22);
     glow(x+(f>0?2:-2), ty+6, 6, neon, (o.glowA||0.16));
   }
+
   // ---------- 手臂 ----------
-  R(tx-2, a1, 2, 9, mix2(coatD,'#000000'));
+  var armB=mix2(mix2(coatD,'#000000'),'#000000');
+  R(tx-3, a1-1, 2, 11, oC);
+  R(tx-2, a1, 2, 9, armB);
   R(tx-2, a1+9, 2, 2, skinD);
+  R(tx+tw+1, a2-1, 2, 11, oC);
   R(tx+tw, a2, 2, 9, coatL);
-  A(tx+tw, a2, 1, 9, '#ffffff', 0.10);
+  A(tx+tw, a2, 1, 9, '#ffffff', 0.12);
   R(tx+tw, a2+9, 2, 2, skin);
+  // 袖口
+  R(tx-2, a1+8, 2, 1, mix2(coatL,coat));
+  R(tx+tw, a2+8, 2, 1, '#ffffff');
+  // 手掌（2×2，带暗边与 1px 拇指）
+  R(tx-2, a1+9, 2, 3, skinD);
+  R(tx-2, a1+9, 2, 1, mix2(skinD,'#000000'));
+  R(tx-1, a1+11, 1, 1, mix2(skinD,'#000000'));
+  R(tx+tw, a2+9, 2, 3, skin);
+  R(tx+tw, a2+11, 2, 1, skinD);
+  // 肩甲
   if(o.pad){
     R(tx-3, ay-1, 4, 4, coatD);
     R(tx-3, ay-1, 4, 1, coatL);
+    R(tx-3, ay+2, 4, 1, dk(coatD,0.5));
     R(tx+tw-1, ay-1, 4, 4, coatD);
     R(tx+tw-1, ay-1, 4, 1, coatL);
+    R(tx+tw-1, ay+2, 4, 1, dk(coatD,0.5));
+    A(tx-2, ay, 1, 1, '#ffffff', 0.22);
   }
+
   // ---------- 颈 ----------
   R(x-1, y-27, 2, 2, skinD);
+  A(x-1, y-27, 2, 1, mix2(skinD,'#000'), 0.6);
+
+  // ---------- 围巾 ----------
   if(o.scarf){
-    R(x-4, y-27, 8, 1, o.scarfD||'#8a2a58');
-    R(x-4, y-26, 8, 2, o.scarf||'#ff5aa0');
-    if(f>0) R(x+4, y-25, 2, 4, o.scarf||'#ff5aa0');
-    else R(x-6, y-25, 2, 4, o.scarf||'#ff5aa0');
+    R(x-3, y-27, 6, 1, o.scarfD||'#8a2a58');
+    R(x-3, y-26, 6, 2, o.scarf||'#ff5aa0');
+    A(x-3, y-26, 6, 1, '#ffffff', 0.20);
+    A(x-3, y-25, 6, 1, o.scarfD||'#8a2a58', 0.45);
+    if(f>0) R(x+3, y-25, 2, 4, o.scarf||'#ff5aa0');
+    else R(x-5, y-25, 2, 4, o.scarf||'#ff5aa0');
+    if(f>0) A(x+3, y-25, 1, 4, '#ffffff', 0.18);
   }
+
   // ---------- 头 ----------
-  R(hx, hy, hw, 7, skin);
-  R(hx, hy, hw, 1, skinL);
-  R(hx+hw-1, hy+1, 1, 6, skinD);
-  R(hx+1, hy+6, hw-2, 1, skinD);
+  R(hx-1, hy-1, hw+2, 10, oS);              // 头部描边
+  R(hx, hy, hw, 8, skin);                    // 脸（8 行）
+  R(hx, hy, hw, 1, skinL);                   // 额受光
+  // 背光侧压暗（按朝向）
+  if(f>0){ R(hx+hw-1, hy+1, 1, 7, skinD); A(hx+hw-2, hy+2, 1, 5, skinD, 0.55); }
+  else   { R(hx, hy+1, 1, 7, skinD);       A(hx+1, hy+2, 1, 5, skinD, 0.55); }
+  // 颧骨 / 下颌收窄 / 下巴
+  A(hx+(f>0?2:hw-3), hy+4, 1, 1, skinL, 0.55);
+  A(hx, hy+5, 1, 3, skinD, 0.85);
+  A(hx+hw-1, hy+5, 1, 3, skinD, 0.85);
+  R(hx+1, hy+7, hw-2, 1, mix2(skinD,skin));
+  A(hx+1, hy+7, hw-2, 1, '#000000', 0.22);
+  A(hx+(f>0?hw-3:1), hy+6, 1, 1, skinD, 0.7);
+  A(hx+1, hy+6, hw-2, 1, skinD, 0.22);
+  // 耳朵
+  R(hx+(f>0?-1:hw), hy+3, 1, 2, mix2(skinD,skin));
+
   // 头发 / 帽子
   if(o.hat==='cap'){
-    R(hx-1, hy-2, hw+2, 2, o.hatC||'#28344c');
-    R(hx-1, hy-2, hw+2, 1, o.hatL||'#41506a');
-    R(hx+(f>0?hw-1:-2), hy, 3, 1, o.hatC||'#28344c');
+    R(hx-2, hy-3, hw+4, 3, o.hatC||'#28344c');
+    R(hx-2, hy-3, hw+4, 1, o.hatL||'#41506a');
+    A(hx-1, hy-2, hw+2, 1, '#ffffff', 0.10);
+    // 帽檐
+    R(hx+(f>0?hw-1:-3), hy, 4, 1, o.hatC||'#28344c');
+    R(hx+(f>0?hw-1:-3), hy, 4, 1, dk(o.hatC||'#28344c',0.4));
     R(hx, hy, hw, 1, hair);
+    A(hx+1, hy, hw-2, 1, mix2(hair,'#4a5a78'), 0.8);
   } else if(o.hat==='hood'){
-    R(hx-2, hy-2, hw+4, 4, o.hatC||coatD);
-    R(hx-2, hy-2, hw+4, 1, coat);
-    R(hx-2, hy+1, 2, 5, o.hatC||coatD);
-    R(hx+hw, hy+1, 2, 5, o.hatC||coatD);
+    R(hx-2, hy-3, hw+4, 5, o.hatC||coatD);
+    R(hx-2, hy-3, hw+4, 1, coat);
+    R(hx-2, hy+1, 2, 6, o.hatC||coatD);
+    R(hx+hw, hy+1, 2, 6, o.hatC||coatD);
+    A(hx-1, hy-2, hw+2, 1, '#ffffff', 0.08);
+    A(hx+(f>0?hw-1:0), hy+2, 1, 4, dk(o.hatC||coatD,0.4), 0.9);
   } else if(o.hat==='helmet'){
-    R(hx-1, hy-2, hw+2, 3, o.hatC||'#38496a');
-    R(hx-1, hy-2, hw+2, 1, o.hatL||'#5b6a86');
-    R(hx-1, hy+1, 1, 3, o.hatC||'#38496a');
-    R(hx+hw, hy+1, 1, 3, o.hatC||'#38496a');
-    R(hx, hy, hw, 1, mix2(o.hatC||'#38496a','#000000'));
+    R(hx-1, hy-3, hw+2, 4, o.hatC||'#38496a');
+    R(hx-1, hy-3, hw+2, 1, o.hatL||'#5b6a86');
+    A(hx, hy-2, hw, 1, '#ffffff', 0.12);
+    R(hx-1, hy+1, 1, 4, o.hatC||'#38496a');
+    R(hx+hw, hy+1, 1, 4, o.hatC||'#38496a');
+    R(hx, hy, hw, 1, dk(o.hatC||'#38496a',0.5));
+    A(hx+hw-2, hy-2, 1, 2, '#ffffff', 0.18);
   } else {
+    // 自然发型：顶部两行 + 鬓角 + 一缕高光
     R(hx, hy-2, hw, 2, hair);
     R(hx, hy-2, hw, 1, mix2(hair,'#3a4a6d'));
-    R(hx-1, hy, 1, 3, hair);
-    R(hx+hw, hy, 1, 2, hair);
-    A(hx, hy+2, hw, 1, '#000000', 0.18);
+    R(hx-1, hy, 1, 4, hair);
+    R(hx+hw, hy, 1, 3, hair);
+    A(hx+1, hy-2, 1, 1, '#ffffff', 0.16);
+    A(hx, hy+2, hw, 1, '#000000', 0.16);
     if(o.hairSpike){
       R(hx+1, hy-4, 2, 2, hair);
       R(hx+4, hy-4, 2, 2, hair);
+      A(hx+1, hy-4, 2, 1, mix2(hair,'#5a6a8d'), 0.8);
     }
   }
-  // 护目镜 / 眼睛
+
+  // ---------- 脸：眉 / 眼 / 鼻 / 嘴 ----------
+  var eyeY=hy+3, ex1, ex2;
   if(o.mask==='visor'){
     var vx=hx+(f>0?1:0), vw=hw-2;
-    R(vx-1, hy+2, vw+2, 3, '#070b14');
+    R(vx-1, hy+2, vw+2, 4, '#060a12');
     R(vx, hy+3, vw, 1, neon);
+    R(vx, hy+4, vw, 1, rgba(neon,0.35).replace('rgba','rgba'));
+    A(vx, hy+3, vw, 1, '#ffffff', 0.18);
     R(vx+vw-1, hy+3, 1, 1, '#ffffff');
+    R(vx-1, hy+2, 1, 4, mix2(neon,'#04070f'));
     glow(x+(f>0?1:0), hy+3, 7, neon, (o.visorA||0.18));
   } else if(o.mask==='goggles'){
-    R(hx, hy+2, hw, 3, '#0b0e18');
-    R(hx+1, hy+3, 2, 1, neon);
-    R(hx+3, hy+3, 2, 1, neon);
-    glow(x, hy+3, 6, neon, (o.visorA||0.15));
+    R(hx-1, hy+2, hw+2, 3, '#0a0e18');
+    R(hx-1, hy+2, hw+2, 1, '#33415c');
+    // 双镜片（中间留鼻梁）
+    R(hx, hy+3, 2, 1, neon);
+    R(hx+hw-2, hy+3, 2, 1, neon);
+    A(hx, hy+3, 2, 1, '#ffffff', 0.30);
+    A(hx+hw-2, hy+3, 2, 1, '#ffffff', 0.30);
+    R(hx+2, hy+3, hw-4, 1, '#0a0e18');
+    R(hx-1, hy+4, 2, 1, '#26314a');
+    R(hx+hw-1, hy+4, 2, 1, '#26314a');
+    // 下巴：人中 + 嘴
+    A(hx+Math.floor(hw/2), hy+5, 1, 1, skinD, 0.7);
+    R(hx+2, hy+6, hw-4, 1, mix2(skinD,'#1a1016'));
+    glow(x, hy+4, 6, neon, (o.visorA||0.15));
   } else if(o.mask==='band'){
-    R(hx+(f>0?2:0), hy+3, 2, 1, '#070b14');
-    R(hx+(f>0?2:0), hy+5, 2, 1, '#070b14');
+    var bx2=hx+(f>0?2:0);
+    R(hx, hy+3, hw, 1, mix2(skinD,'#2a1a22'));
+    R(bx2, hy+3, 2, 1, '#070b14');
+    R(bx2, hy+5, 2, 1, '#070b14');
     R(hx+1, hy+6, hw-3, 1, skinD);
+    A(hx+(f>0?hw-3:1), hy+4, 1, 2, mix2(skinD,'#000'), 0.5);
   } else if(o.mask==='grin'){
-    R(hx+1, hy+3, 1, 1, o.eye||'#ff5a4a');
-    R(hx+hw-2, hy+3, 1, 1, o.eye||'#ff5a4a');
-    R(hx+2, hy+5, hw-4, 1, '#070b14');
-  } else {
-    R(hx+(f>0?hw-3:1), hy+3, 1, 1, '#070b14');
-    R(hx+(f>0?hw-3:1), hy+5, 1, 1, '#070b14');
+    var gx2=hx+(f>0?1:0);
+    R(gx2, hy+3, 2, 1, o.eye||'#ff5a4a');
+    R(gx2+hw-3, hy+3, 2, 1, o.eye||'#ff5a4a');
+    R(gx2-1, hy+2, hw-1, 1, '#0a0f18');
+    R(gx2, hy+5, hw-2, 1, '#070b14');
+    A(gx2+1, hy+5, 1, 1, '#ffffff', 0.55);
+    glow(x, hy+3, 5, (o.eye||'#ff5a4a'), 0.12);
+  } else if(o.mask!=='none'){
+    // 默认：眉 + 眼 + 鼻 + 嘴
+    ex1=hx+(f>0?hw-3:1); ex2=ex1+1;
+    R(ex1-1, eyeY-1, 3, 1, mix2(skinD,'#20141a'));      // 眉
+    R(ex1, eyeY, 2, 1, '#070b14');                        // 眼
+    R(ex1+(f>0?1:0), eyeY, 1, 1, '#dff2ff');              // 眼神光
+    A(ex1, eyeY+1, 2, 1, skinD, 0.5);                     // 眼窝
+    R(hx+(f>0?hw-2:1), hy+4, 1, 1, skinD);                // 鼻影
+    R(hx+(f>0?2:1), hy+6, 2, 1, mix2(skinD,'#1a1016'));   // 嘴
+    A(hx+(f>0?hw-2:1), hy+5, 1, 1, skinL, 0.5);
   }
   if(o.beard){
     R(hx+1, hy+6, hw-2, 2, o.beardC||'#cdc9bd');
+    R(hx+1, hy+6, hw-2, 1, mix2(o.beardC||'#cdc9bd','#ffffff'));
     R(hx+1, hy+8, hw-3, 1, o.beardC||'#cdc9bd');
+    A(hx+2, hy+7, hw-4, 1, '#000000', 0.12);
   }
-  // ---------- 轮廓光（只打在头与肩） ----------
+
+  // ---------- 轮廓光（只打在头与肩，双色：霓虹 + 暖白） ----------
   var rim=(o.rimA===undefined?0.14:o.rimA);
-  A(hx+(f>0?hw:1), hy+1, 1, 5, neon, rim);
-  A(x+(f>0?Math.floor(tw/2):-Math.floor(tw/2)-1), ty+1, 1, 4, neon, rim*0.8);
+  A(hx+(f>0?hw:1), hy+1, 1, 6, neon, rim);
+  A(hx+(f>0?hw:1), hy+1, 1, 2, '#ffffff', rim*0.5);
+  A(x+(f>0?Math.floor(tw/2):-Math.floor(tw/2)-1), ty+1, 1, 5, neon, rim*0.8);
+  A(tx, ty-1, tw, 1, neon, rim*0.35);
+
   // ---------- 道具 ----------
   if(o.prop==='gun'){
     var gy2=y-18-Math.round(step*0.5);
     if(f>0){
       R(x+8, gy2, 12, 2, '#38496a');
+      R(x+8, gy2, 12, 1, '#5b6a86');
       R(x+11, gy2-1, 4, 1, '#5b6a86');
       R(x+17, gy2-1, 3, 1, neon);
+      R(x+9, gy2+2, 3, 2, '#28344c');
       glow(x+19, gy2, 7, neon, 0.20);
     } else {
       R(x-20, gy2, 12, 2, '#38496a');
+      R(x-20, gy2, 12, 1, '#5b6a86');
       R(x-18, gy2-1, 4, 1, '#5b6a86');
       R(x-20, gy2-1, 3, 1, neon);
+      R(x-12, gy2+2, 3, 2, '#28344c');
       glow(x-20, gy2, 7, neon, 0.20);
     }
   } else if(o.prop==='stick'){
     var sy2=y-17-Math.round(step*0.5);
     var sx5=x+(f>0?8:-16);
     R(sx5, sy2, 2, 9, '#38496a');
+    R(sx5, sy2, 1, 9, '#5b6a86');
+    R(sx5-1, sy2+3, 1, 3, '#28344c');
     A(sx5, sy2, 2, 2, neon, 0.85);
     glow(sx5+1, sy2+1, 7, neon, 0.20);
   } else if(o.prop==='pipe'){
     var py2=y-21-Math.round(step*0.5);
     var px5=x+(f>0?8:-17);
     R(px5, py2, 2, 12, '#4a5464');
+    R(px5, py2, 1, 12, '#6b7889');
     R(px5, py2, 2, 2, '#8fa0b8');
+    R(px5-1, py2+7, 1, 2, '#2a3242');
   } else if(o.prop==='bag'){
-    var bgx=x+(f>0?-9:5);
-    OB(bgx, y-19, 4, 6, OL);
+    var bgx=x+(f>0?-10:5);
+    R(bgx-1, y-20, 6, 8, dkc('#5a4a2e'));
     R(bgx, y-19, 4, 6, '#5a4a2e');
     R(bgx, y-19, 4, 1, '#8a7345');
     R(bgx+1, y-17, 2, 2, '#c9a24a');
+    A(bgx+1, y-19, 1, 5, '#ffffff', 0.10);
+    // 背带
+    A(x+(f>0?2:-3), y-25, 1, 6, '#3a2f1e', 0.9);
   }
 }
+
+// ---------- 调色与纹理工具 ----------
+function dk(c,k){                       // 变暗（拉向冷黑，不发灰）
+  var t=k===undefined?0.5:k;
+  return mix2(mix2(c,'#03060d'),t>0.5?'#03060d':c);
+}
+function lt(c,k){                       // 变亮（拉向暖白）
+  var t=k===undefined?0.5:k;
+  return mix2(mix2(c,'#fff6e0'),(t>0.5?'#fff6e0':c));
+}
+function dkc(c){ return mix2(mix2(mix2(c,'#04070f'),'#04070f'),'#04070f'); }
+// 2×2 棋盘抖动：在两种颜色之间做像素级过渡，消除大块平涂
+function dith(x,y,w,h,c,a){
+  if(a===undefined) a=0.5;
+  x=Math.round(x); y=Math.round(y); w=Math.round(w); h=Math.round(h);
+  for(var yy=0;yy<h;yy++){
+    for(var xx=(yy%2);xx<w;xx+=2){
+      A(x+xx,y+yy,1,1,c,a);
+    }
+  }
+}
+// 竖向渐变抖动（上疏下密）
+function dithV(x,y,w,h,c,a0,a1){
+  x=Math.round(x); y=Math.round(y); w=Math.round(w); h=Math.round(h);
+  for(var yy=0;yy<h;yy++){
+    var a=a0+(a1-a0)*(h<=1?1:yy/(h-1));
+    A(x,y+yy,w,1,c,a*0.5);
+    for(var xx=(yy%2);xx<w;xx+=2) A(x+xx,y+yy,1,1,c,a);
+  }
+}
+function panelLine(x,y,w,c,a){ A(x,y,w,1,c,a===undefined?0.5:a); }
+
 function mix2(c1,c2){
   var a1=parseInt(c1.substr(1,2),16),b1=parseInt(c1.substr(3,2),16),d1=parseInt(c1.substr(5,2),16);
   var a2=parseInt(c2.substr(1,2),16),b2=parseInt(c2.substr(3,2),16),d2=parseInt(c2.substr(5,2),16);
@@ -3569,9 +4722,12 @@ function drawNpc(id,x,y,opt){
     drawHuman({x:x,y:y,face:face,walk:walk,bob:bob,
       coat:'#7a1f3a',coatD:'#4e1426',coatL:'#a83054',pants:'#2a1620',boots:'#120a10',
       hair:'#1a1220',hat:'none',mask:'none',neon:'#ffc857',rimA:0.14});
-    // 盘发
-    R(x-4,y-37,8,3,'#1a1220');
-    R(x+3,y-39,4,4,'#241a2a');
+    // 盘发（后脑一个发髻，不高于头顶 1px）
+    R(x-4,y-36,9,3,'#1a1220');
+    A(x-4,y-36,9,1,'#33243a',0.9);
+    R(x-4,y-38,4,2,'#241a2a');
+    R(x-3,y-39,2,1,'#2e2036');
+    A(x-4,y-38,3,1,'#3a2c40',0.8);
     // 手包
     R(x+(face>0?7:-10),y-18,4,5,'#2a1a20');
     R(x+(face>0?8:-9),y-19,2,1,'#c9a24a');
@@ -3760,16 +4916,19 @@ var SHEET_DEFS={
             coat:'#d8d0bc',coatD:'#b0a890',coatL:'#f2ecdc',
             pants:'#3a4a56',boots:'#1a222a',hair:'#2a2228',
             hat:'none',mask:'none',neon:'#3ee9ff',rimA:0.12});
-          // 围裙
-          R(x-5,y-22,10,10,'#2c4a5e');
-          R(x-5,y-22,10,1,'#4a7a94');
+          // 围裙（带肩带）
+          R(x-4,y-22,8,9,'#25404f');
+          R(x-4,y-22,8,1,'#457286');
+          R(x-3,y-25,1,3,'#2c4a5e');
+          R(x+2,y-25,1,3,'#2c4a5e');
+          A(x-3,y-21,1,7,'#ffffff',0.10);
           // 柜台
-          R(x-11,y-13,22,3,'#4a3a28');
-          R(x-11,y-13,22,1,'#6b5a40');
-          R(x-11,y-10,22,1,'#241a12');
+          R(x-12,y-11,24,3,'#4a3a28');
+          R(x-12,y-11,24,1,'#7a6242');
+          A(x-12,y-8,24,1,'#1a120c',0.9);
           // 收银机
-          R(x+3,y-18,5,4,'#1a2230');
-          R(x+4,y-17,3,1,'#3ee9ff');
+          R(x+4,y-16,5,4,'#1a2230');
+          R(x+5,y-15,3,1,'#3ee9ff');
         }});
       return out;
     }
@@ -3822,9 +4981,13 @@ function buildSheet(name){
     g.font='6px "Microsoft YaHei",sans-serif';
     g.fillText(it.sub||'', cx+3, cy+d.cellH+8);
   }
-  try{ return sheet.c.toDataURL('image/png'); }catch(e){ return null; }
+  return sheet.c;
 }
-window.__SHEET__=function(name){ return buildSheet(name); };
+window.__SHEET_CANVAS__=function(name){ return buildSheet(name); };
+window.__SHEET__=function(name){
+  var c=buildSheet(name);
+  try{ return c?c.toDataURL('image/png'):null; }catch(e){ return null; }
+};
 window.__SHEET_NAMES__=function(){ var a=[]; for(var k in SHEET_DEFS) a.push(k); return a; };
 
 function drawDuskIntel(){
@@ -3841,9 +5004,10 @@ function drawDuskIntel(){
   ctx.fill();
   var tx=left?(x+13):(x-13-((''+G.intel.count).length*4-1));
   text3S(tx,cy-2,'x'+G.intel.count,'#ff8f5a');
-  // 顶部提示条
+  // 顶部提示条：第几波 / 之后还有几波
   A(0,10,VW,9,'#0a0f1a',0.55);
-  var label=left?'ENEMY LEFT':'ENEMY RIGHT';
+  var total=(G.plan&&G.plan.length)?G.plan.length:1;
+  var label=(left?'ENEMY LEFT':'ENEMY RIGHT')+' '+1+'/'+total;
   text3S(VW/2-text3W(label)/2,12,label,'#ff8f5a');
 }
 
@@ -3935,10 +5099,11 @@ function loop(ts){
 // ============================== 启动 ==============================
 reset();
 layout();
+auLoadPrefs();
 var q=(location.search||'');
 if(q.indexOf('demo')>=0){
   // 截图/调试用：直接进入一个已开工的街景
-  G.started=true; closePanel();
+  G.started=true; closePanel(); hideTitle();
   G.purse=1200; G.vault=800; G.prestige=64; G.homeLevel=3; G.powerCap=22;
   G.homeMax=200; G.homeHP=170; G.totalRevenue=7200; G.dayRevenue=340; G.dayTarget=440; G.day=6;
   G.staff=2; G.drops=7;
@@ -3982,12 +5147,14 @@ if(q.indexOf('demo')>=0){
   }
   if(q.indexOf('menu')>=0) setTimeout(function(){ hardwareMenu(); },60);
 } else {
-  tutorialStart();
+  showTitle();
 }
 requestAnimationFrame(loop);
 
 try{ Object.defineProperty(window,'__GAME__',{get:function(){return G;},configurable:true}); }
 catch(e){ window.__GAME__=G; }
+window.__SHOP__=SHOPS;
+window.__SHOP_ART__=SHOP_ART;
 window.__DBG__={
   get G(){return G;}, get slots(){return slots;}, get menuOpen(){return menuOpen;},
   doInteract:doInteract, placeOrder:placeOrder, handleAct:handleAct, homeMenu:homeMenu,
@@ -4002,7 +5169,14 @@ window.__DBG__={
   storyPanel:storyPanel, storyRead:storyRead, npcPanel:npcPanel, storyCheck:storyCheck,
   doorState:doorState, endingA:endingA, joinNpc:joinNpc, hasNpc:hasNpc,
   npcChipText:npcChipText, npcState:npcState, npcCondText:npcCondText, settleLine:settleLine,
-  get DOOR_X(){return DOOR_X;}, xiaoDialog:xiaoDialog, doPact:doPact
+  get DOOR_X(){return DOOR_X;}, xiaoDialog:xiaoDialog, doPact:doPact, get SHOP(){return SHOPS;},
+  writeSlot:writeSlot, readSlot:readSlot, loadGame:loadGame, newGame:newGame,
+  mainMenu:mainMenu, loadPanel:loadPanel,
+  deleteSlot:deleteSlot, showTitle:showTitle, showSlots:showSlots, manualSave:manualSave,
+  get slot(){return curSlot;}, setSlot:function(i){ curSlot=i; },
+  get audio(){return {bgm:AU.bgm,sfx:AU.sfx,mode:AU.mode,started:!!AU.ctx};},
+  get music(){return {mode:AU.mode,cur:curTrack,samples:Object.keys(SFX_BUF).length,loaded:Object.keys(MUSIC_BUF),loading:Object.keys(MUSIC_LOADING).filter(function(k){return MUSIC_LOADING[k];})};},
+  auSetBgm:auSetBgm, auSetSfx:auSetSfx
 };
 })();
 </script>

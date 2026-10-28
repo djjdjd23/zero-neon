@@ -80,6 +80,16 @@ const sandbox = {
   location: { search: '' }, console, Math, Date, JSON, parseInt, parseFloat, isNaN,
   String, Number, Object, Array, Boolean, Set, Map, setTimeout, clearTimeout
 };
+// 假 localStorage（存档测试用）
+const _lsStore = {};
+const lsStub = {
+  getItem(k){ return Object.prototype.hasOwnProperty.call(_lsStore, k) ? _lsStore[k] : null; },
+  setItem(k, v){ _lsStore[k] = String(v); },
+  removeItem(k){ delete _lsStore[k]; },
+  clear(){ for (const k in _lsStore) delete _lsStore[k]; }
+};
+sandbox.localStorage = lsStub;
+sandbox.window.localStorage = lsStub;
 sandbox.globalThis = sandbox;
 sandbox.window.requestAnimationFrame = sandbox.requestAnimationFrame;
 
@@ -558,6 +568,138 @@ run('enemy hp bar renders for a full-health enemy', () => {
   sandbox.window.__NODRAW__ = true;
   G.parts.length = 0;
   G.enemies.length = 0;
+});
+
+
+run('save slot round-trips through localStorage', () => {
+  sandbox.localStorage.clear();
+  D.handleAct('restart'); if (D.menuOpen) D.closePanel();
+  G.started = true; G.day = 3; G.purse = 1234; G.vault = 555; G.prestige = 77;
+  D.setSlot(1);
+  if (!D.writeSlot(1)) throw new Error('write failed');
+  const rec = D.readSlot(1);
+  if (!rec) throw new Error('read null');
+  if (rec.sum.day !== 3 || rec.sum.purse !== 1234) throw new Error('summary wrong: ' + JSON.stringify(rec.sum));
+  G.day = 9; G.purse = 1;
+  if (!D.loadGame(1)) throw new Error('load failed');
+  if (G.day !== 3 || G.purse !== 1234) throw new Error('restore failed: day=' + G.day + ' purse=' + G.purse);
+  if (D.slot !== 1) throw new Error('slot not rebound');
+});
+
+run('night save rolls back to that day\u2019s morning', () => {
+  sandbox.localStorage.clear();
+  D.handleAct('restart'); if (D.menuOpen) D.closePanel();
+  G.started = true; D.setSlot(0);
+  D.startNight(); if (D.menuOpen) D.closePanel();
+  G.paused = false;
+  D.writeSlot(0);
+  const rec = D.readSlot(0);
+  if (!rec) throw new Error('no record');
+  if (rec.sum.phase !== 'day') throw new Error('phase saved as ' + rec.sum.phase);
+});
+
+run('new day auto-saves into the bound slot', () => {
+  sandbox.localStorage.clear();
+  D.handleAct('restart'); if (D.menuOpen) D.closePanel();
+  G.started = true; G.day = 1; D.setSlot(2);
+  D.newDay();
+  const rec = D.readSlot(2);
+  if (!rec) throw new Error('no auto save');
+  if (rec.sum.day !== 2) throw new Error('auto save day=' + rec.sum.day);
+});
+
+run('title and slot screens render with three slots', () => {
+  sandbox.localStorage.clear();
+  D.writeSlot(0);
+  D.showTitle();
+  const t = sandbox.document.getElementById('titleScr');
+  if (t.style.display !== 'flex') throw new Error('title not shown');
+  D.showSlots();
+  const sl = sandbox.document.getElementById('slotScr');
+  if (sl.style.display !== 'flex') throw new Error('slots not shown');
+  const list = sandbox.document.getElementById('slList');
+  const n = (list.innerHTML.match(/sl-card/g) || []).length;
+  if (n !== 3) throw new Error('expected 3 cards, got ' + n);
+  if (list.innerHTML.indexOf('空存档') < 0) throw new Error('empty slot label missing');
+});
+
+run('new game binds a slot and waits for start', () => {
+  sandbox.localStorage.clear();
+  D.newGame(0);
+  if (D.slot !== 0) throw new Error('slot not bound');
+  if (G.started) throw new Error('new game should not auto-start');
+  if (!D.menuOpen) throw new Error('tutorial not shown');
+  D.closePanel();
+  G.started = true;
+});
+
+run('audio toggles persist and never throw without a real AudioContext', () => {
+  D.auSetBgm(false); D.auSetSfx(false);
+  if (D.audio.bgm || D.audio.sfx) throw new Error('toggles did not apply');
+  D.auSetBgm(true); D.auSetSfx(true);
+  if (!D.audio.bgm || !D.audio.sfx) throw new Error('toggles did not restore');
+  const saved = JSON.parse(sandbox.localStorage.getItem('zn_audio_v2') || '{}');
+  if (saved.bgm !== true || saved.sfx !== true) throw new Error('prefs not saved: ' + JSON.stringify(saved));
+});
+
+
+run('night 1 is right-side only, night 2 starts alternating', () => {
+  function planOf(day) {
+    D.handleAct('restart'); if (D.menuOpen) D.closePanel();
+    G.started = true; G.paused = false; G.day = day; G.fighters.length = 0;
+    D.startNight(); if (D.menuOpen) D.closePanel(); G.paused = false;
+    if (!G.plan || !G.plan.length) throw new Error('no night plan for day ' + day);
+    return G.plan;
+  }
+  const p1 = planOf(1);
+  if (p1.length < 2) throw new Error('night 1 should still have 2 waves, got ' + p1.length);
+  const s1 = p1.map(w => w.side < 0 ? 'L' : 'R').join('');
+  if (s1 !== 'RR') throw new Error('night 1 must come from the right only, got ' + s1);
+
+  const p2 = planOf(2);
+  const s2 = p2.map(w => w.side < 0 ? 'L' : 'R').join('');
+  if (p2[0].side < 0) throw new Error('night 2 first wave should still be from the right, got ' + s2);
+  if (p2[1] && p2[1].side > 0) throw new Error('night 2 second wave should come from the left, got ' + s2);
+
+  // 实际刷怪方向必须和计划一致
+  for (let i = 0; i < p2.length; i++) {
+    G.enemies.length = 0;
+    D.spawnWave(); if (D.menuOpen) D.closePanel(); G.paused = false;
+    step(2);
+    if (!G.enemies.length) throw new Error('wave ' + (i + 1) + ' spawned nothing');
+    const want = p2[i].side;
+    for (const e of G.enemies) {
+      if (want > 0 && e.x <= 0) throw new Error('wave ' + (i + 1) + ' should come from the right, enemy at ' + e.x);
+      if (want < 0 && e.x >= 0) throw new Error('wave ' + (i + 1) + ' should come from the left, enemy at ' + e.x);
+    }
+  }
+});
+
+
+run('main menu hosts save / load / audio / quit', () => {
+  D.handleAct('restart'); if (D.menuOpen) D.closePanel();
+  G.started = true; G.day = 5; D.setSlot(0);
+  D.mainMenu();
+  if (!D.menuOpen) throw new Error('main menu not open');
+  const html = D.panel.innerHTML;
+  for (const label of ['保存进度', '读取存档', '游戏音乐', '游戏音效', '回到主菜单']) {
+    if (html.indexOf(label) < 0) throw new Error('missing menu item: ' + label);
+  }
+  const b0 = D.audio.bgm;
+  D.handleAct('toggleBgm');
+  if (D.audio.bgm === b0) throw new Error('bgm toggle had no effect');
+  D.handleAct('toggleBgm');
+  if (D.audio.bgm !== b0) throw new Error('bgm toggle did not restore');
+  D.loadPanel();
+  if (D.panel.innerHTML.indexOf('存档') < 0) throw new Error('load panel empty');
+  D.closePanel();
+});
+
+run('building signs are Chinese text, not ASCII', () => {
+  for (const k in sandbox.window.__SHOP_ART__) {
+    const cn = sandbox.window.__SHOP_ART__[k].cn;
+    if (!cn || !/[\u4e00-\u9fa5]/.test(cn)) throw new Error('shop ' + k + ' has no Chinese sign: ' + cn);
+  }
 });
 
 console.log(log.join('\n'));
