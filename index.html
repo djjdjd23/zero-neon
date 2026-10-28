@@ -8,12 +8,17 @@
 <meta name="theme-color" content="#04050a">
 <title>零点霓虹 · Zero Neon</title>
 <style>
-  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;
+    -webkit-touch-callout:none;-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none;
+    -webkit-user-drag:none;user-drag:none}
+  ::selection{background:transparent}
+  ::-moz-selection{background:transparent}
   html,body{margin:0;padding:0;height:100%;width:100%;background:#04050a;overflow:hidden;
     font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",monospace;
-    color:#e6ecf5;-webkit-user-select:none;user-select:none;touch-action:none;overscroll-behavior:none}
-  #stage{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
-  #game{position:relative;background:#000;overflow:hidden;--s:1px}
+    color:#e6ecf5;-webkit-user-select:none;user-select:none;touch-action:none;overscroll-behavior:none;
+    -webkit-touch-callout:none;-webkit-text-size-adjust:100%}
+  #stage{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;overflow:hidden}
+  #game{position:relative;background:#000;overflow:hidden;--s:1px;transform-origin:center center;will-change:transform}
   canvas{display:block;width:100%;height:100%;image-rendering:pixelated;image-rendering:crisp-edges;-ms-interpolation-mode:nearest-neighbor}
   .hud{position:absolute;pointer-events:none;font-size:calc(var(--s)*7.4);line-height:1.25;letter-spacing:.02em;text-shadow:0 1px 0 #000,0 0 4px #000}
   #top{top:calc(var(--s)*3);left:calc(var(--s)*4);right:calc(var(--s)*4);display:flex;gap:calc(var(--s)*3);align-items:flex-start;flex-wrap:wrap;max-height:calc(var(--s)*40);overflow:hidden}
@@ -57,6 +62,19 @@
   #rotate .ico{width:56px;height:96px;border:3px solid #3a4d70;border-radius:10px;animation:rot 2s ease-in-out infinite}
   @keyframes rot{0%,40%{transform:rotate(0)}60%,100%{transform:rotate(90deg)}}
   #rotate p{font-size:15px;color:#8fa0bb;margin:0}
+  #rotate .sub{font-size:13px;color:#5c6b85}
+  /* 竖屏时旋转整个游戏容器 */
+  #game.rotated{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%) rotate(90deg)}
+  #game.rotated.alt{transform:translate(-50%,-50%) rotate(-90deg)}
+  #flipBtn{display:none}
+  #game.rotated #flipBtn{display:inline-block}
+  #obj{position:absolute;left:calc(var(--s)*4);top:calc(var(--s)*17);right:calc(var(--s)*4);
+    pointer-events:none;font-size:calc(var(--s)*7);line-height:1.4}
+  #obj .box{display:inline-block;max-width:100%;background:rgba(10,20,38,.86);border:1px solid #3d6fae;
+    border-left:calc(var(--s)*1.6) solid #ffd86b;border-radius:calc(var(--s)*2);
+    padding:calc(var(--s)*1.8) calc(var(--s)*3.2);color:#dbe7f7;text-shadow:0 1px 0 #000}
+  #obj .step{color:#ffd86b}
+  #obj.hide{display:none}
 </style>
 </head>
 <body>
@@ -73,8 +91,12 @@
         <button class="btn" data-sp="2">2×</button>
         <button class="btn" data-sp="4">4×</button>
         <button class="btn" id="skipBtn" style="display:none">跳过</button>
+        <button class="btn" id="flipBtn">翻转</button>
+        <button class="btn" id="helpBtn">?</button>
       </div>
     </div>
+
+    <div id="obj"><div class="box" id="objText"></div></div>
 
     <div id="pad">
       <div class="side">
@@ -143,16 +165,28 @@ var panelWrap=$('panelWrap'), panel=$('panel');
 
 function layout(){
   var w=window.innerWidth, h=window.innerHeight;
-  var W=w, H=W*9/16;
-  if(H>h){H=h;W=H*16/9;}
-  W=Math.floor(W); H=Math.floor(H);
-  gameEl.style.width=W+'px';
-  gameEl.style.height=H+'px';
-  gameEl.style.setProperty('--s', (H/180)+'px');
   var portrait = h>w;
+  var W,H;
+  if(portrait){
+    // 竖屏：把整个游戏容器旋转 90° 铺满，无需用户开自动旋转
+    H = w;                       // 旋转后可见高度 = 屏宽
+    W = Math.min(h, H*16/9);     // 旋转后可见宽度 = 屏高
+    gameEl.classList.add('rotated');
+    gameEl.style.width=Math.floor(W)+'px';
+    gameEl.style.height=Math.floor(H)+'px';
+    gameEl.style.setProperty('--s',(H/180)+'px');
+  } else {
+    W=w; H=W*9/16;
+    if(H>h){H=h;W=H*16/9;}
+    W=Math.floor(W); H=Math.floor(H);
+    gameEl.classList.remove('rotated');
+    gameEl.style.width=W+'px';
+    gameEl.style.height=H+'px';
+    gameEl.style.setProperty('--s',(H/180)+'px');
+  }
   var rot=$('rotate');
-  if(portrait && w<900){ rot.classList.add('show'); G.paused=true; }
-  else { rot.classList.remove('show'); G.paused=false; }
+  if(rot) rot.classList.remove('show');
+  if(G) G.paused=false;
 }
 window.addEventListener('resize',layout);
 window.addEventListener('orientationchange',function(){setTimeout(layout,120);});
@@ -395,6 +429,7 @@ function handleAct(act){
   if(a==='raze'){ var st4=bySlot(+v); if(st4){ slots[st4.slot].st=null; recomputePower(); } closePanel(); return; }
   if(a==='sellDrops'){ G.purse+=G.drops*25; addParts(G.player.x,GY-20,8,'#b79bff'); G.drops=0; syncHUD(); closePanel(); return; }
   if(a==='zhouTalk'){ zhouDialog(); return; }
+  if(a==='help'){ helpPanel(); return; }
   if(a==='settleGo'){ closePanel(); newDay(); return; }
   if(a==='restart'){ closePanel(); reset(); G.started=true; return; }
   if(a==='startGame'){ closePanel(); G.started=true; return; }
@@ -807,6 +842,21 @@ function gameOver(reason){
 }
 
 // ============================== 输入 ==============================
+// 彻底禁掉长按选中 / 长按菜单 / 双击缩放
+(function(){
+  var block=function(e){ e.preventDefault(); return false; };
+  document.addEventListener('selectstart', block, {passive:false});
+  document.addEventListener('contextmenu', block, {passive:false});
+  document.addEventListener('dragstart', block, {passive:false});
+  document.addEventListener('gesturestart', block, {passive:false});
+  var lastTouch=0;
+  document.addEventListener('touchend', function(e){
+    var now=Date.now();
+    if(now-lastTouch<320) e.preventDefault();
+    lastTouch=now;
+  }, {passive:false});
+})();
+
 function setKey(k,v){ if(k in keys) keys[k]=v; }
 window.addEventListener('keydown',function(e){
   if(e.key==='ArrowLeft'||e.key==='a'||e.key==='A'){ setKey('left',true); e.preventDefault(); }
@@ -845,8 +895,75 @@ for(var i=0;i<spBtns.length;i++){
   (function(b){ b.addEventListener('click',function(){ setSpeed(parseInt(b.dataset.sp,10)); }); })(spBtns[i]);
 }
 $('skipBtn').addEventListener('click',function(){ if(G.phase==='dusk'){ startNight(); } });
+$('helpBtn').addEventListener('click',function(){ helpPanel(); });
+$('flipBtn').addEventListener('click',function(){
+  gameEl.classList.toggle('alt');
+});
 
-// ============================== 绘制 ==============================
+// ============================== 指引 / 教程 ==============================
+var lastObj='';
+function objectiveText(){
+  var builtShops=countShops();
+  var building=0;
+  slots.forEach(function(s){ if(s.st&&s.st.state==='building') building++; });
+  if(G.phase==='night'){
+    if(G.homeHP<G.homeMax*0.4) return '<span class="step">夜</span> 家快撑不住了！跑回去守住';
+    if(G.enemies.length>0) return '<span class="step">夜</span> 敌人在砸店 · 跑过去抢修，别站着看';
+    return '<span class="step">夜</span> 守住这 150 秒 · 夜里不能加速';
+  }
+  if(G.phase==='dusk') return '<span class="step">黄昏</span> 确认电力分配，点「跳过」立刻入夜';
+  if(G.order) return '<span class="step">建造</span> 走到街上<span style="color:#8fd3ff">闪烁的空位</span>，按 E 放置';
+  if(building>0) return '<span class="step">建造</span> 施工队在建（约 '+Math.ceil(building?slots.find(function(s){return s.st&&s.st.state==='building';}).st.buildT:0)+' 秒）';
+  if(builtShops===0) return '<span class="step">1/4</span> 走到<span style="color:#ffd86b">左边五金店</span>，按 E 打开建造菜单';
+  var outOfStock=false;
+  slots.forEach(function(s){ if(s.st&&isShop(s.st.kind)&&s.st.kind!=='pawn'&&s.st.state==='ok'&&s.st.stock<=0&&s.st.restockT<=0) outOfStock=true; });
+  if(outOfStock) return '<span class="step">补货</span> 有店缺货了（招牌冒红点）· 走过去按 E 补货';
+  if(G.fighters.length===0) return '<span class="step">2/4</span> 走到<span style="color:#ffd86b">家</span>，按 E 招募一名保安（夜里要靠他）';
+  if(G.gcoins.length>0) return '<span class="step">收钱</span> 金币掉在地上了 · 走过去捡';
+  if(G.homeLevel===1&&G.totalRevenue>=LV[1].rev&&G.prestige>=LV[1].pres) return '<span class="step">3/4</span> 可以升级家了 · 回家按 E（电力 +6kW）';
+  if(builtShops<2) return '<span class="step">扩张</span> 去五金店再开一家店 · 店越多收入越快';
+  if(G.day<=3) return '<span class="step">4/4</span> 撑过今晚 · 威望归零才算输';
+  return '<span class="step">目标</span> 累计营业额 '+G.totalRevenue+' · 威望 '+Math.floor(G.prestige)+' · 撑下去';
+}
+function syncObjective(){
+  var t=objectiveText();
+  if(t===lastObj) return;
+  lastObj=t;
+  var el=$('objText');
+  if(el) el.innerHTML=t;
+}
+function toggleObj(){
+  var el=$('obj');
+  if(el) el.classList.toggle('hide');
+}
+
+function helpPanel(){
+  var h='<h3>怎么玩</h3>';
+  h+='<div class="txt" style="color:#8fd3ff">一句话：白天赚钱，夜里守街。你打不了人，只能跑。</div>';
+  h+='<div class="txt"><b>1. 建造</b><br>走到左边<b>五金店</b>按 E → 选商店或防御（付钱下单）→ 走到街上<b>闪烁的空位</b>按 E → 五金店派施工队来建。<br>商店 25 秒，防御 10 秒。施工中工地会被砸。</div>';
+  h+='<div class="txt"><b>2. 收钱</b><br>商店卖出东西会掉金币在地上，<b>必须走过去捡</b>。捡到的钱是「随身现金」，被敌人碰到会掉 15%。</div>';
+  h+='<div class="txt"><b>3. 补货</b><br>每家店每天有固定库存，卖光后招牌冒<span style="color:#ff6b6b">红点</span>、停止赚钱。走过去按 E 触发补货（5～12 秒补满）。</div>';
+  h+='<div class="txt"><b>4. 家</b><br>走到中间的<b>家</b>按 E：<br>· 存钱/取钱（金库有利息 2%/天，但被攻破会损失 40%）<br>· 升级家（电力、商店上限、防御上限、保安上限）<br>· 招募员工（提升该店收入 35%）<br>· 招募保安（近战 / 远程 / 机器人）</div>';
+  h+='<div class="txt"><b>5. 电力</b><br>每天固定额度，<b>06:00 重置</b>。所有商店和防御都吃电，员工和保安不吃。超了会自动断掉后建的建筑（地下电缆会变红）。升级家 = 更多电力。</div>';
+  h+='<div class="txt"><b>6. 夜晚</b><br>敌人从街两端进来砸店。<b>你只能跑</b>：<br>· 站到某段附近，那段保安伤害 +20%<br>· 敌人碰你会抢走随身现金<br>· 建筑被砸 → 掉威望 + 店员逃走 + 要重建<br>· 家被砸 → 金库 -40%、降 1 级、当晚结束、次日白天 260 秒</div>';
+  h+='<div class="txt"><b>7. 输赢</b><br><b>唯一失败条件：威望归零。</b>建造和升级涨威望，被砸和被打掉威望。钱能赚回来，威望要好几天的正常营业才修得回来。</div>';
+  h+='<div class="txt" style="color:#ffd86b"><b>时间</b><br>白天 200 秒（1×/2×/4×可加速）→ 黄昏 45 秒（可跳过）→ 夜晚 150 秒（<b>锁 1×，不能加速</b>）。</div>';
+  h+='<div class="foot"><button class="btn" data-act="close">知道了</button></div>';
+  openPanel(h);
+}
+
+function tutorialStart(){
+  var h='<h3>零点霓虹</h3>';
+  h+='<div class="txt" style="color:#8fd3ff">清河街 · 第 1 天 · 06:00</div>';
+  h+='<div class="txt">你接手了这条街上最后一家店。<br>白天开门做生意，夜里……有人会来砸。</div>';
+  h+='<div class="txt"><b>操作</b><br>· 左下 <b>◀ ▶</b> 移动（按住不放）<br>· 右下 <b>E</b> 交互：建造 / 补货 / 招募 / 对话</div>';
+  h+='<div class="txt"><b>第一步</b><br>走到左边的<b>五金店</b>按 E，选一家「便利店」下单，<br>然后走到街上闪烁的空位按 E 放置。</div>';
+  h+='<div class="txt" style="color:#7f8da8;font-size:calc(var(--s)*6)">屏幕上方会一直提示你现在该做什么。点右上角 ? 随时查看完整玩法。</div>';
+  h+='<div class="foot"><button class="btn" data-act="startGame">开始营业</button><button class="btn" data-act="help">完整玩法</button></div>';
+  openPanel(h);
+}
+
+
 var ox=0;
 function R(x,y,w,h,c){ ctx.fillStyle=c; ctx.fillRect(Math.round(x+ox),Math.round(y),w,h); }
 var SKYM=[0,0,0];
@@ -1321,6 +1438,7 @@ function loop(ts){
       if(p.life<=0) G.parts.splice(i,1);
     }
     updatePhase(dt);
+    syncObjective();
   }
   draw();
   requestAnimationFrame(loop);
@@ -1364,8 +1482,7 @@ if(q.indexOf('demo')>=0){
   }
   if(q.indexOf('menu')>=0) setTimeout(function(){ hardwareMenu(); },60);
 } else {
-  var intro='<h3>零点霓虹</h3><div class="txt">横屏像素 · 白天经营，夜里守街。<br><br>◀ ▶ 移动 · E 交互（建造 / 补货 / 招募 / 对话）<br>走到五金店下单，走到空位按 E 放置。<br>夜里敌人会来砸店，你打不了人，只能跑动调度。</div><div class="foot"><button class="btn" data-act="startGame">开始营业</button></div>';
-  openPanel(intro);
+  tutorialStart();
 }
 requestAnimationFrame(loop);
 
