@@ -411,6 +411,11 @@ function prestige(n){
   if(G.prestige<=0) gameOver('威望归零 · 这条街被清空了');
 }
 function addParts(x,y,n,c){ for(var i=0;i<n;i++) G.parts.push({x:x,y:y,vx:rr(-24,24),vy:rr(-46,-10),life:rr(.3,.8),c:c||'#ffd86b'}); }
+// 伤害飘字（像素数字，上浮后消失）
+function addDmgNum(x,y,v,c){
+  var n=Math.round(v); if(n<1) n=1;
+  G.parts.push({kind:'dmg',x:x,y:y,vx:rr(-7,7),vy:-26,life:0.85,nograv:true,txt:''+n,c:c||'#ffe08a'});
+}
 function capShops(){ return LV[G.homeLevel-1].shops; }
 function capDefs(){ return LV[G.homeLevel-1].defs; }
 function capFighters(){ return LV[G.homeLevel-1].fighters; }
@@ -1256,8 +1261,9 @@ function typeNames(arr){
   var m={},out=[];
   for(var i=0;i<arr.length;i++) m[arr[i]]=(m[arr[i]]||0)+1;
   for(var k in m){
-    var n=(ENEMY[k]||{}).name||k;
-    out.push(n+(m[k]>1?'×'+m[k]:''));
+    var e2=ENEMY[k]||{};
+    var hp=Math.floor((e2.hp||0)*(1+G.day*0.03));
+    out.push((e2.name||k)+(m[k]>1?'×'+m[k]:'')+' '+hp+'血');
   }
   return out.join(' · ');
 }
@@ -1344,7 +1350,7 @@ function updateEnemies(dt){
     for(var fi=0;fi<G.fighters.length;fi++){
       var ff=G.fighters[fi];
       var df=Math.abs(ff.x-e.x);
-      if(df<17&&df<bdist){ bdist=df; blk=ff; }
+      if(df<9&&df<bdist){ bdist=df; blk=ff; }
     }
     if(blk){
       e.face=blk.x>e.x?1:-1;
@@ -1353,6 +1359,7 @@ function updateEnemies(dt){
         e.cd=0.9;
         blk.hp-=e.dmg*0.55;
         addParts(blk.x+(blk.x>e.x?5:-5),GY-16,3,'#ff8f5a');
+        addDmgNum(blk.x,GY-30,e.dmg*0.55,'#ff8f6a');
       }
       continue;
     }
@@ -1481,10 +1488,16 @@ function updateFighters(dt){
       var dir=target.x>f.x?1:-1;
       f.face=dir;
       if(f.type==='melee'){
-        if(bd>cfg.range-2){ f.x+=dir*cfg.speed*dt; }
+        if(bd>cfg.range){ f.x+=dir*cfg.speed*dt; }
         else {
           f.cd-=dt;
-          if(f.cd<=0){ f.cd=cfg.rate; target.hp-=cfg.dmg*dmgMul('melee'); addParts(target.x,GY-10,2,'#ffd86b'); }
+          if(f.cd<=0){
+            f.cd=cfg.rate;
+            var md1=cfg.dmg*dmgMul('melee');
+            target.hp-=md1;
+            addParts(target.x,GY-12,2,'#ffd86b');
+            addDmgNum(target.x,GY-26,md1,'#ffe08a');
+          }
         }
       } else if(f.type==='robot'){
         if(bd>cfg.range*0.8){ f.x+=dir*cfg.speed*dt; }
@@ -1554,7 +1567,7 @@ function updateProjs(dt){
     var hit=false;
     for(var j=0;j<G.enemies.length;j++){
       var e=G.enemies[j];
-      if(e.x>=lo&&e.x<=hi){ e.hp-=pr.dmg; hit=true; addParts(e.x,pr.y,3,'#ffd86b'); break; }
+      if(e.x>=lo&&e.x<=hi){ e.hp-=pr.dmg; hit=true; addParts(e.x,pr.y,3,'#ffd86b'); addDmgNum(e.x,GY-26,pr.dmg,'#bfe8ff'); break; }
     }
     if(hit||pr.life<=0||Math.abs(pr.x)>620) G.projs.splice(i,1);
   }
@@ -3263,12 +3276,13 @@ function drawEnemy(e){
       hair:'#2a1f38',hat:'hood',hatC:'#2a1f38',mask:'visory',neon:'#ff5a4a',visorA:0.26,
       prop:'bag',rimA:0.16});
   }
-  if(e.hp<e.maxHp){
-    var bw=(t==='boss'||t==='captain')?18:(t==='cyborg'?14:11);
-    R(x-bw/2-1,y-40,bw+2,4,'#080c14');
-    R(x-bw/2,y-39,bw,2,'#2a1016');
-    R(x-bw/2,y-39,bw*clamp(e.hp/e.maxHp,0,1),2,e.boss?'#ffc857':'#ff5a4a');
-  }
+  // 血条常显：满血也画，残血变红
+  var hpR=clamp(e.hp/e.maxHp,0,1);
+  var bw=(t==='captain'||t==='cyborg')?18:(t==='smasher'||t==='gang'?14:12);
+  R(x-bw/2-1,y-37,bw+2,4,'#05080e');
+  R(x-bw/2,y-36,bw,2,'#2a1016');
+  R(x-bw/2,y-36,bw*hpR,2, e.boss?'#ffc857':(hpR>0.55?'#7ff0c4':(hpR>0.28?'#ffd04a':'#ff3a3a')));
+  if(hpR>0.04) A(x-bw/2,y-36,bw*hpR,1,'#ffd8c0',0.30);
 }
 
 function drawFighter(f){
@@ -3411,6 +3425,16 @@ function drawCoins(){
 function drawParts(){
   for(var i=0;i<G.parts.length;i++){
     var p=G.parts[i];
+    if(p.kind==='dmg'){
+      var al=clamp(p.life*1.5,0,1);
+      var dw=text3W(p.txt);
+      var dx=Math.round(p.x+ox-dw/2), dy=Math.round(p.y);
+      SA(dx-2,dy-1,dw+4,7,'#04060c',0.45*al);   // 底板，保证在窗户/霓虹上也看得清
+      ctx.globalAlpha=al;
+      text3S(dx,dy,p.txt,p.c);
+      ctx.globalAlpha=1;
+      continue;
+    }
     ctx.fillStyle=p.c;
     ctx.globalAlpha=clamp(p.life*2,0,1);
     ctx.fillRect(Math.round(p.x+ox),Math.round(p.y),1,1);
@@ -3895,7 +3919,7 @@ function loop(ts){
     updateFighters(dt*G.speed);
     if(G.flash>0) G.flash-=dt;
     for(var i=G.parts.length-1;i>=0;i--){
-      var p=G.parts[i]; p.life-=dt; p.x+=p.vx*dt; p.y+=p.vy*dt; p.vy+=200*dt;
+      var p=G.parts[i]; p.life-=dt; p.x+=p.vx*dt; p.y+=p.vy*dt; if(!p.nograv) p.vy+=200*dt;
       if(p.life<=0) G.parts.splice(i,1);
     }
     updatePhase(dt);

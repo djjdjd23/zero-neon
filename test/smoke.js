@@ -528,6 +528,38 @@ run('act 4 spawns 陈晓 and the pact stays narrative', () => {
   }
 });
 
+
+run('a lone guard actually damages enemies (night 1 regression)', () => {
+  D.handleAct('restart'); if (D.menuOpen) D.closePanel();
+  G.started = true; G.paused = false; G.purse = 9999; G.day = 1;
+  G.phase = 'night'; D.startNight(); if (D.menuOpen) D.closePanel();
+  G.paused = false; G.userPaused = false;
+  G.wavesLeft = 0; G.waveTimer = 999; G.enemies.length = 0;
+  G.fighters.length = 0;
+  D.addFighter('melee');
+  const f = G.fighters[0];
+  f.x = 0; f.hp = 120; f.maxHp = 120;
+  G.enemies.push({ type:'thief', x: 34, hp: 20, maxHp: 20, dmg: 4, speed: 0, cd: 99, hitCd: 0, face: -1, stealT: 0 });
+  const e = G.enemies[0];
+  const hp0 = e.hp;
+  secs(7);
+  const gone = G.enemies.length === 0;
+  if (!gone && !(e.hp < hp0)) throw new Error('enemy never took damage (hp=' + e.hp + '), guard at ' + f.x.toFixed(0) + ' enemy at ' + e.x.toFixed(0));
+  if (f.hp < 120) throw new Error('guard should out-damage a lone thief, hp=' + f.hp);
+});
+
+run('enemy hp bar renders for a full-health enemy', () => {
+  sandbox.window.__NODRAW__ = false;
+  G.parts.length = 0;
+  G.parts.push({ kind:'dmg', x: 0, y: 100, vx: 0, vy: -20, life: 0.8, nograv: true, txt: '12', c: '#ffe08a' });
+  G.enemies.length = 0;
+  G.enemies.push({ type:'thief', x: 10, hp: 20, maxHp: 20, dmg: 4, speed: 0, cd: 99, hitCd: 0, face: 1, stealT: 0 });
+  step(2);
+  sandbox.window.__NODRAW__ = true;
+  G.parts.length = 0;
+  G.enemies.length = 0;
+});
+
 console.log(log.join('\n'));
 console.log('\n--- final ---');
 console.log('day=' + G.day, 'phase=' + G.phase, 'purse=' + Math.floor(G.purse),
