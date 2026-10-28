@@ -38,9 +38,21 @@
     justify-content:space-between;padding:calc(var(--s)*6);pointer-events:none}
   #pad .side{display:flex;gap:calc(var(--s)*5);pointer-events:auto}
   .big{width:calc(var(--s)*30);height:calc(var(--s)*30);border-radius:50%;display:flex;align-items:center;justify-content:center;
-    background:rgba(20,28,44,.6);border:1px solid #33456a;font-size:calc(var(--s)*11);color:#cfd8ea}
+    background:rgba(20,28,44,.6);border:1px solid #33456a;font-size:calc(var(--s)*11);color:#cfd8ea;
+    touch-action:none;-webkit-user-select:none;user-select:none;pointer-events:auto}
   .big:active{background:rgba(50,70,110,.85)}
   #eBtn{width:calc(var(--s)*36);height:calc(var(--s)*36);font-size:calc(var(--s)*9)}
+  .pulse{animation:btnPulse 1.05s ease-in-out infinite}
+  @keyframes btnPulse{
+    0%,100%{box-shadow:0 0 0 0 rgba(255,216,107,0);border-color:#33456a}
+    50%{box-shadow:0 0 0 calc(var(--s)*2.4) rgba(255,216,107,.5);border-color:#ffd86b;color:#fff}
+  }
+  .tip{position:fixed;transform:translate(-50%,-100%);pointer-events:none;display:none;z-index:120;
+    background:rgba(10,20,38,.94);border:1px solid #3d6fae;border-radius:calc(var(--s,1px)*2);
+    padding:calc(var(--s,1px)*1.6) calc(var(--s,1px)*3.2);font-size:calc(var(--s,1px)*7);color:#dbe7f7;
+    white-space:nowrap;text-shadow:0 1px 0 #000;box-shadow:0 0 calc(var(--s,1px)*4) rgba(0,0,0,.8)}
+  .tip.show{display:block}
+  .tip b{color:#ffd86b}
   #panelWrap{position:absolute;inset:0;background:rgba(3,5,10,.72);display:none;align-items:center;justify-content:center;padding:calc(var(--s)*8);pointer-events:auto}
   #panelWrap.show{display:flex}
   #panel{width:100%;max-width:calc(var(--s)*210);max-height:100%;overflow-y:auto;background:#0c1120;
@@ -75,6 +87,12 @@
     padding:calc(var(--s)*1.8) calc(var(--s)*3.2);color:#dbe7f7;text-shadow:0 1px 0 #000}
   #obj .step{color:#ffd86b}
   #obj.hide{display:none}
+  #objBox{display:inline-block;max-width:100%;background:rgba(10,20,38,.86);border:1px solid #3d6fae;
+    border-left:calc(var(--s)*1.6) solid #ffd86b;border-radius:calc(var(--s)*2);
+    padding:calc(var(--s)*1.8) calc(var(--s)*3.2);color:#dbe7f7;text-shadow:0 1px 0 #000}
+  #objBox .step{color:#ffd86b}
+  #objBox .arrow{color:#ffd86b;margin-left:calc(var(--s)*2);animation:blink 0.9s steps(2,end) infinite}
+  @keyframes blink{50%{opacity:.15}}
 </style>
 </head>
 <body>
@@ -96,7 +114,7 @@
       </div>
     </div>
 
-    <div id="obj"><div class="box" id="objText"></div></div>
+    <div id="obj"><div class="box" id="objBox"><span id="objText"></span><span class="arrow" id="objArrow">◀</span></div></div>
 
     <div id="pad">
       <div class="side">
@@ -107,6 +125,8 @@
         <div class="big" id="eBtn">E</div>
       </div>
     </div>
+
+    <div class="tip" id="tip"></div>
 
     <div id="panelWrap"><div id="panel"></div></div>
   </div>
@@ -214,7 +234,7 @@ function reset(){
     drops:0, defsBuilt:0, destroyedNight:0, waveTimer:0, wavesLeft:0, waveGap:22,
     longDay:false, kills:0, staff:0, rain:false, flash:0,
     settle:null, over:false, started:false, story:0, nightDestroyed:0,
-    camX:0, tick:0
+    camX:0, tick:0, moved:0, collected:0, hardwareOpened:false
   };
   for(var i=0;i<slots.length;i++) slots[i].st=null;
   syncHUD();
@@ -326,6 +346,7 @@ function homeMenu(){
 }
 
 function hardwareMenu(){
+  G.hardwareOpened=true;
   var h='<h3>五金店</h3><div class="txt">下单后走到空位按 E 放置。施工期间工地可能被破坏。</div>';
   var k;
   var shopKeys=['conv','tea','food','pawn'];
@@ -430,6 +451,7 @@ function handleAct(act){
   if(a==='sellDrops'){ G.purse+=G.drops*25; addParts(G.player.x,GY-20,8,'#b79bff'); G.drops=0; syncHUD(); closePanel(); return; }
   if(a==='zhouTalk'){ zhouDialog(); return; }
   if(a==='help'){ helpPanel(); return; }
+  if(a==='skipTut'){ tutActive=false; lastObj=''; closePanel(); syncObjective(); return; }
   if(a==='settleGo'){ closePanel(); newDay(); return; }
   if(a==='restart'){ closePanel(); reset(); G.started=true; return; }
   if(a==='startGame'){ closePanel(); G.started=true; return; }
@@ -505,13 +527,12 @@ function placeOrder(slot){
 
 // ============================== 玩家 ==============================
 var keys={left:false,right:false};
-function updatePlayer(dt){
-  var p=G.player;
+function updatePlayer(dt){  var p=G.player;
   var dir=0;
   if(keys.left) dir-=1;
   if(keys.right) dir+=1;
   var sp=62;
-  if(dir!==0){ p.vx=dir*sp; p.face=dir; p.walk+=dt*7; }
+  if(dir!==0){ p.vx=dir*sp; p.face=dir; p.walk+=dt*7; G.moved+=Math.abs(p.vx)*dt; }
   else { p.vx*=Math.pow(0.001,dt); p.walk=0; }
   p.x+=p.vx*dt;
   p.x=clamp(p.x,-560,560);
@@ -592,6 +613,7 @@ function updateCoins(dt){
     }
     if(Math.abs(d)<9 && c.y>GY-16){
       earn(c.val); addParts(c.x,c.y,2,'#ffd86b');
+      G.collected++;
       G.gcoins.splice(i,1); continue;
     }
     if(c.life<=0){ G.gcoins.splice(i,1); }
@@ -842,19 +864,13 @@ function gameOver(reason){
 }
 
 // ============================== 输入 ==============================
-// 彻底禁掉长按选中 / 长按菜单 / 双击缩放
+// 禁掉长按选中 / 长按菜单 / 拖拽，但**不动 touchend**（会干扰点击）
 (function(){
   var block=function(e){ e.preventDefault(); return false; };
   document.addEventListener('selectstart', block, {passive:false});
   document.addEventListener('contextmenu', block, {passive:false});
   document.addEventListener('dragstart', block, {passive:false});
   document.addEventListener('gesturestart', block, {passive:false});
-  var lastTouch=0;
-  document.addEventListener('touchend', function(e){
-    var now=Date.now();
-    if(now-lastTouch<320) e.preventDefault();
-    lastTouch=now;
-  }, {passive:false});
 })();
 
 function setKey(k,v){ if(k in keys) keys[k]=v; }
@@ -872,19 +888,76 @@ window.addEventListener('keyup',function(e){
   if(e.key==='ArrowRight'||e.key==='d'||e.key==='D') setKey('right',false);
 });
 
-function bindHold(el,on,off){
-  var active=false;
-  function down(ev){ if(ev&&ev.preventDefault)ev.preventDefault(); active=true; on(); }
-  function up(ev){ if(ev&&ev.preventDefault)ev.preventDefault(); if(!active)return; active=false; off(); }
-  el.addEventListener('pointerdown',down);
-  el.addEventListener('pointerup',up);
-  el.addEventListener('pointercancel',up);
-  el.addEventListener('pointerleave',up);
-  el.addEventListener('contextmenu',function(e){e.preventDefault();});
+// ============================== 触控（全局命中测试，最稳） ==============================
+// 不依赖 DOM 层级 / pointer-events，直接在屏幕坐标上判断按到了哪个按钮
+var touchState={left:false,right:false};
+function hitTest(cx,cy){
+  var ids=['leftBtn','rightBtn','eBtn'];
+  for(var i=0;i<ids.length;i++){
+    var el=$(ids[i]);
+    if(!el) continue;
+    var r=el.getBoundingClientRect();
+    // 扩大命中区，手指比鼠标粗
+    var pad=Math.max(8, r.width*0.18);
+    if(cx>=r.left-pad && cx<=r.right+pad && cy>=r.top-pad && cy<=r.bottom+pad) return ids[i];
+  }
+  return null;
 }
-bindHold($('leftBtn'),function(){setKey('left',true);},function(){setKey('left',false);});
-bindHold($('rightBtn'),function(){setKey('right',true);},function(){setKey('right',false);});
-$('eBtn').addEventListener('pointerdown',function(e){ if(e&&e.preventDefault)e.preventDefault(); if(!menuOpen) doInteract(); });
+function pressStart(cx,cy){
+  if(menuOpen) return null;
+  var hit=hitTest(cx,cy);
+  if(!hit) return null;
+  if(hit==='leftBtn'){ touchState.left=true; setKey('left',true); }
+  else if(hit==='rightBtn'){ touchState.right=true; setKey('right',true); }
+  else if(hit==='eBtn'){ doInteract(); }
+  return hit;
+}
+function pressEnd(){
+  if(touchState.left){ touchState.left=false; setKey('left',false); }
+  if(touchState.right){ touchState.right=false; setKey('right',false); }
+}
+function installTouch(){
+  var activeIds={};
+  function onDown(e){
+    var t=e.touches?e.touches[0]:e;
+    if(!t) return;
+    if(menuOpen) return;
+    var hit=hitTest(t.clientX,t.clientY);
+    if(!hit) return;
+    if(e.cancelable) e.preventDefault();
+    activeIds[e.pointerId!=null?e.pointerId:(t.identifier||0)]=true;
+    pressStart(t.clientX,t.clientY);
+  }
+  function onMove(e){
+    var t=e.touches?e.touches[0]:e;
+    if(!t) return;
+    if(touchState.left||touchState.right){
+      if(!hitTest(t.clientX,t.clientY)) pressEnd();
+    }
+  }
+  function onUp(e){
+    if(e.cancelable) e.preventDefault();
+    activeIds={};
+    pressEnd();
+  }
+  if(window.PointerEvent){
+    document.addEventListener('pointerdown',onDown,{passive:false});
+    document.addEventListener('pointermove',onMove,{passive:false});
+    document.addEventListener('pointerup',onUp,{passive:false});
+    document.addEventListener('pointercancel',onUp,{passive:false});
+  } else {
+    document.addEventListener('touchstart',onDown,{passive:false});
+    document.addEventListener('touchmove',onMove,{passive:false});
+    document.addEventListener('touchend',onUp,{passive:false});
+    document.addEventListener('touchcancel',onUp,{passive:false});
+  }
+  // 鼠标兜底（桌面测试）
+  document.addEventListener('mousedown',function(e){
+    if(menuOpen) return;
+    if(pressStart(e.clientX,e.clientY)) e.preventDefault();
+  },{passive:false});
+  document.addEventListener('mouseup',pressEnd);
+}
 
 function setSpeed(s){
   if(G.phase==='night') s=1;
@@ -899,9 +972,147 @@ $('helpBtn').addEventListener('click',function(){ helpPanel(); });
 $('flipBtn').addEventListener('click',function(){
   gameEl.classList.toggle('alt');
 });
+installTouch();
+
+// ============================== 动态教程 ==============================
+// 直接在游戏画面里用箭头 + 光圈 + 气泡指引，玩家做到哪一步就前进到哪一步
+var TUT=[
+  {id:'move', text:'按住 <b>◀ ▶</b> 走两步试试', target:function(){ return {kind:'dom', id:'rightBtn'}; },
+   done:function(){ return G.moved>70; }},
+  {id:'goHardware', text:'走到左边的<b>五金店</b>（就是这儿）', target:function(){ return {kind:'world', x:-52, y:GY-52}; },
+   done:function(){ return Math.abs(G.player.x+52)<28; }},
+  {id:'openMenu', text:'按 <b>E</b> 打开建造菜单', target:function(){ return {kind:'dom', id:'eBtn'}; },
+   done:function(){ return !!G.hardwareOpened; }},
+  {id:'order', text:'选一家<b>便利店</b>下单（💰200）', target:function(){ return {kind:'dom', id:'panel'}; },
+   done:function(){ return !!G.order || countShops()>0; }},
+  {id:'place', text:'走到街上<b>闪烁的空位</b>，按 <b>E</b> 放置', target:function(){ return {kind:'slot'}; },
+   done:function(){ return slots.some(function(s){ return s.st; }); }},
+  {id:'build', text:'施工队在建了，等它盖完（约 25 秒）', target:function(){ return {kind:'build'}; },
+   done:function(){ return slots.some(function(s){ return s.st&&s.st.state==='ok'; }); }},
+  {id:'collect', text:'金币掉地上了 · 走过去<b>捡起来</b>', target:function(){ return {kind:'coin'}; },
+   done:function(){ return G.collected>0; }},
+  {id:'restock', text:'库存卖光就<b>走过去按 E 补货</b>（也可以先去招人）', target:function(){ return {kind:'shop'}; },
+   done:function(){ return G.fighters.length>0 || G.day>=2; }},
+  {id:'hire', text:'回到<b>家</b>，按 E 招募一名保安', target:function(){ return {kind:'world', x:0, y:GY-70}; },
+   done:function(){ return G.fighters.length>0; }},
+  {id:'night', text:'天要黑了 · 守住这一夜，<b>你只能跑</b>', target:function(){ return {kind:'none'}; },
+   done:function(){ return G.day>=2 || G.phase==='night'; }}
+];
+var tutIndex=0, tutActive=true;
+
+function tutCurrent(){
+  if(!tutActive) return null;
+  return tutIndex<TUT.length ? TUT[tutIndex] : null;
+}
+function updateTutorial(){
+  if(!tutActive) return;
+  var guard=0;
+  while(tutIndex<TUT.length && TUT[tutIndex].done() && guard++<12) tutIndex++;
+  if(tutIndex>=TUT.length){ tutActive=false; }
+  if(typeof window!=='undefined' && window.__TUT__) window.__TUT__.i=tutIndex;
+}
+function tutTargetPos(){
+  var s=tutCurrent(); if(!s) return null;
+  var tg=s.target();
+  if(!tg) return null;
+  if(tg.kind==='world') return {x:tg.x, y:tg.y};
+  if(tg.kind==='slot'){
+    var best=null,bd=1e9;
+    for(var i=0;i<slots.length;i++){
+      var sl=slots[i];
+      if(sl.st) continue;
+      var d=Math.abs(sl.x-G.player.x);
+      if(d<bd){bd=d;best=sl;}
+    }
+    return best?{x:best.x,y:GY-24}:null;
+  }
+  if(tg.kind==='build'){
+    for(var j=0;j<slots.length;j++){ if(slots[j].st&&slots[j].st.state==='building') return {x:slots[j].x,y:GY-30}; }
+    return null;
+  }
+  if(tg.kind==='coin'){
+    if(G.gcoins.length) return {x:G.gcoins[0].x,y:G.gcoins[0].y-8};
+    for(var k=0;k<slots.length;k++){ if(slots[k].st&&isShop(slots[k].st.kind)&&slots[k].st.kind!=='pawn') return {x:slots[k].x,y:GY-46}; }
+    return null;
+  }
+  if(tg.kind==='shop'){
+    for(var m=0;m<slots.length;m++){ if(slots[m].st&&isShop(slots[m].st.kind)) return {x:slots[m].x,y:GY-46}; }
+    return null;
+  }
+  return null;
+}
+function drawTutArrow(){
+  var s=tutCurrent();
+  if(!s||menuOpen||G.over) return;
+  var p=tutTargetPos();
+  if(!p) return;
+  var sx=p.x+ox, sy=p.y;
+  var ph=Math.sin(G.tick*3.4);
+  var r=11+ph*2.6;
+  ctx.lineWidth=1.4;
+  ctx.strokeStyle='rgba(255,216,107,0.95)';
+  ctx.beginPath(); ctx.arc(sx,sy,r,0,6.283); ctx.stroke();
+  ctx.strokeStyle='rgba(255,216,107,0.28)';
+  ctx.beginPath(); ctx.arc(sx,sy,r+4,0,6.283); ctx.stroke();
+  // 上方跳动的箭头
+  var ay=sy-r-6-ph*2.5;
+  ctx.fillStyle='#ffd86b';
+  ctx.fillRect(sx-1,ay-7,3,7);
+  ctx.beginPath(); ctx.moveTo(sx-4,ay-1); ctx.lineTo(sx+4,ay-1); ctx.lineTo(sx,ay+5); ctx.closePath(); ctx.fill();
+}
+function syncTutDom(){
+  var s=tutCurrent();
+  var tip=$('tip');
+  if(!tip) return;
+  // 旋转模式下 DOM 坐标与视觉坐标不一致，改用画布箭头 + 顶部文字指引
+  if(gameEl.classList.contains('rotated')){ tip.classList.remove('show'); return; }
+  if(!s||menuOpen||G.over){ tip.classList.remove('show'); return; }
+  var tg=s.target();
+  if(!tg||tg.kind!=='dom'){ tip.classList.remove('show'); return; }
+  var el=$(tg.id);
+  if(!el){ tip.classList.remove('show'); return; }
+  var er=el.getBoundingClientRect();
+  if(!er.width && !er.height){ tip.classList.remove('show'); return; }
+  var cx=er.left+er.width/2;
+  var cy=er.top-8;
+  var halfW=(tip.offsetWidth||120)/2;
+  cx=clamp(cx, halfW+6, window.innerWidth-halfW-6);
+  tip.style.left=cx+'px';
+  tip.style.top=cy+'px';
+  tip.innerHTML=s.text;
+  tip.classList.add('show');
+}
+function syncTutText(){
+  var s=tutCurrent();
+  var box=$('objText');
+  if(!box) return;
+  if(!s){ return; }
+  var n=Math.min(tutIndex+1,TUT.length);
+  var arrow='';
+  var tg=s.target();
+  if(tg){
+    if(tg.kind==='world') arrow = (tg.x<G.player.x-6)?'◀':(tg.x>G.player.x+6?'▶':'●');
+    else if(tg.kind==='slot'||tg.kind==='build'||tg.kind==='coin'||tg.kind==='shop'){
+      var p=tutTargetPos();
+      if(p) arrow = (p.x<G.player.x-6)?'◀':(p.x>G.player.x+6?'▶':'●');
+      else arrow='▼';
+    }
+    else if(tg.kind==='dom') arrow='▼';
+  }
+  var txt='<span class="step">教程 '+n+'/'+TUT.length+'</span> '+s.text;
+  if(lastObj!==txt){ lastObj=txt; box.innerHTML=txt; }
+  var ar=$('objArrow');
+  if(ar){ ar.textContent=arrow||''; }
+  var e=$('eBtn'), l=$('leftBtn'), r=$('rightBtn');
+  if(e){ e.classList.toggle('pulse', s.id==='openMenu'||s.id==='place'); }
+  if(l){ l.classList.toggle('pulse', s.id==='move'); }
+  if(r){ r.classList.toggle('pulse', s.id==='move'); }
+}
+
 
 // ============================== 指引 / 教程 ==============================
 var lastObj='';
+var TUTDONE=false;
 function objectiveText(){
   var builtShops=countShops();
   var building=0;
@@ -926,6 +1137,7 @@ function objectiveText(){
   return '<span class="step">目标</span> 累计营业额 '+G.totalRevenue+' · 威望 '+Math.floor(G.prestige)+' · 撑下去';
 }
 function syncObjective(){
+  if(tutActive){ syncTutText(); syncTutDom(); return; }
   var t=objectiveText();
   if(t===lastObj) return;
   lastObj=t;
@@ -948,7 +1160,7 @@ function helpPanel(){
   h+='<div class="txt"><b>6. 夜晚</b><br>敌人从街两端进来砸店。<b>你只能跑</b>：<br>· 站到某段附近，那段保安伤害 +20%<br>· 敌人碰你会抢走随身现金<br>· 建筑被砸 → 掉威望 + 店员逃走 + 要重建<br>· 家被砸 → 金库 -40%、降 1 级、当晚结束、次日白天 260 秒</div>';
   h+='<div class="txt"><b>7. 输赢</b><br><b>唯一失败条件：威望归零。</b>建造和升级涨威望，被砸和被打掉威望。钱能赚回来，威望要好几天的正常营业才修得回来。</div>';
   h+='<div class="txt" style="color:#ffd86b"><b>时间</b><br>白天 200 秒（1×/2×/4×可加速）→ 黄昏 45 秒（可跳过）→ 夜晚 150 秒（<b>锁 1×，不能加速</b>）。</div>';
-  h+='<div class="foot"><button class="btn" data-act="close">知道了</button></div>';
+  h+='<div class="foot"><button class="btn" data-act="close">知道了</button>'+(tutActive?'<button class="btn" data-act="skipTut">跳过教程</button>':'')+'</div>';
   openPanel(h);
 }
 
@@ -1404,6 +1616,7 @@ function draw(){
   drawProjs();
   drawParts();
   drawPrompt();
+  drawTutArrow();
   drawNightOverlay();
   drawRain();
   if(G.flash>0){
@@ -1438,6 +1651,7 @@ function loop(ts){
       if(p.life<=0) G.parts.splice(i,1);
     }
     updatePhase(dt);
+    updateTutorial();
     syncObjective();
   }
   draw();
@@ -1480,13 +1694,27 @@ if(q.indexOf('demo')>=0){
     G.enemies.push({type:'smasher',x:230,hp:40,maxHp:40,dmg:8,speed:0,cd:9,hitCd:0,face:-1,stealT:0});
     G.enemies.push({type:'thief',x:-200,hp:20,maxHp:20,dmg:4,speed:0,cd:9,hitCd:0,face:1,stealT:0});
   }
+  if(q.indexOf('geom')>=0){
+    setTimeout(function(){
+      var gr=gameEl.getBoundingClientRect();
+      var cr=cv.getBoundingClientRect();
+      var d=document.createElement('div');
+      d.style.cssText='position:fixed;left:0;top:0;z-index:9999;background:#000;color:#0f0;font:12px monospace;padding:4px;white-space:pre';
+      d.textContent='win '+window.innerWidth+'x'+window.innerHeight+
+        '\ngame '+Math.round(gr.left)+','+Math.round(gr.top)+' '+Math.round(gr.width)+'x'+Math.round(gr.height)+
+        '\ncanvas '+Math.round(cr.left)+','+Math.round(cr.top)+' '+Math.round(cr.width)+'x'+Math.round(cr.height)+
+        '\nrot '+gameEl.className;
+      document.body.appendChild(d);
+    },300);
+  }
   if(q.indexOf('menu')>=0) setTimeout(function(){ hardwareMenu(); },60);
 } else {
   tutorialStart();
 }
 requestAnimationFrame(loop);
 
-window.__GAME__=G;
+try{ Object.defineProperty(window,'__GAME__',{get:function(){return G;},configurable:true}); }
+catch(e){ window.__GAME__=G; }
 window.__DBG__={
   get G(){return G;}, get slots(){return slots;}, get menuOpen(){return menuOpen;},
   doInteract:doInteract, placeOrder:placeOrder, handleAct:handleAct, homeMenu:homeMenu,
@@ -1494,7 +1722,10 @@ window.__DBG__={
   startNight:startNight, spawnWave:spawnWave, endNight:endNight, newDay:newDay,
   destroyHome:destroyHome, recomputePower:recomputePower, addFighter:addFighter,
   setKey:setKey, setSpeed:setSpeed, closePanel:closePanel, bySlot:bySlot,
-  get panel(){return panel;}, get keys(){return keys;}
+  get panel(){return panel;}, get keys(){return keys;},
+  hitTest:hitTest, pressStart:pressStart, pressEnd:pressEnd, installTouch:installTouch,
+  get tutIndex(){return tutIndex;}, get tutActive(){return tutActive;},
+  setTut:function(i){ tutIndex=i; tutActive=true; }, skipTut:function(){ tutActive=false; }
 };
 })();
 </script>
