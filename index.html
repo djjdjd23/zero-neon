@@ -301,7 +301,7 @@ function buildSlots(){
 
 function reset(){
   buildSlots();
-  G={
+  var NG={
     day:1, phase:'day', t:DAY_LEN, speed:1, paused:false,
     purse:300, vault:0, prestige:30, powerCap:10, powerUse:0,
     homeLevel:1, homeHP:120, homeMax:120,
@@ -315,6 +315,9 @@ function reset(){
     settle:null, over:false, started:false, story:0, nightDestroyed:0,
     camX:0, tick:0, moved:0, collected:0, hardwareOpened:false
   };
+  // 原地重置，保持 G 的对象引用（外部/调试引用不会失效）
+  for(var k0 in G) delete G[k0];
+  for(var k1 in NG) G[k1]=NG[k1];
   for(var i=0;i<slots.length;i++) slots[i].st=null;
   syncHUD();
 }
@@ -398,6 +401,18 @@ panel.addEventListener('click',function(e){
   handleAct(act);
 });
 
+// 点击面板外部关闭（结算/结束面板除外）
+(function(){
+  var wrap=panelWrap;
+  if(!wrap) return;
+  wrap.addEventListener('click',function(e){
+    if(e.target!==wrap) return;
+    if(!menuOpen) return;
+    if(G.over||G.phase==='settle') return;   // 结算/结束面板必须点按钮
+    closePanel();
+  },{passive:true});
+})();
+
 function money(n){ return '💰'+n; }
 
 function homeMenu(){
@@ -416,7 +431,7 @@ function homeMenu(){
   } else {
     h+=row('已满级 Lv8','','','', 'none');
   }
-  h+=row('招募员工', '提升商店收入 +35%','💰100',G.purse<100||countShops()<=0,'hireStaff');
+  h+=row('布防 · 调度','设置每人夜里守左 / 守右 / 自动','',false,'deploy');
   h+=row('招募 近战保安', '血厚 · 伤害低','💰200',G.purse<200||G.fighters.length>=capFighters(),'hireMelee');
   h+=row('招募 远程保安', '血薄 · 伤害高'+(G.homeLevel<3?' · 需 Lv3':''),'💰450',G.purse<450||G.homeLevel<3||G.fighters.length>=capFighters(),'hireRanged');
   h+=row('招募 战斗机器人', '血厚伤害高 · 限额 '+(G.homeLevel>=6?robotCap():0)+(G.homeLevel<6?' · 需 Lv6':''),'💰1500',G.purse<1500||G.homeLevel<6||countRobots()>=robotCap(),'hireRobot');
@@ -465,18 +480,26 @@ function shopMenu(st){
   if(st.state==='building'){
     h+='<div class="txt">施工中… '+Math.ceil(st.buildT)+'s</div>'+foot(); openPanel(h); return;
   }
-  if(isShop(st.kind)&&st.kind!=='pawn'){
-    h+='<div class="txt">库存 '+st.stock+'/'+st.maxStock+' · 员工 '+st.staff+'/'+st.level+' · '+c.power+'kW<br>'+(st.restockT>0?('补货中… '+Math.ceil(st.restockT)+'s'):(st.stock<=0?'<span style="color:#ff6b6b">缺货 · 停止收入</span>':'营业中'))+'</div>';
-    h+=row('补货', c.restock+' 秒补满', '', st.restockT>0||st.stock>=st.maxStock,'restock:'+st.slot);
-  } else if(st.kind==='pawn'){
-    h+='<div class="txt">掉落物 '+G.drops+' 件 · 每件 25<br>不产生销售收入</div>';
-    h+=row('卖出全部掉落物','换现金','💰'+(G.drops*25),G.drops<=0,'sellDrops');
-    h+='<div class="txt">贷款 '+Math.floor(G.loan)+' · 日息 5%'+(G.loan>4000?' · <span style="color:#ff6b6b">逾期 -2 威望/天</span>':'')+'</div>';
-    h+=row('借 1000','日息 5% · 逾期掉威望','',false,'borrow');
-    h+=row('还清贷款',(G.loan>0?'需 💰'+Math.ceil(G.loan):'无贷款'),'',G.loan<=0||G.purse<G.loan,'repay');
+  if(c.noIncome){
+    if(st.kind==='pawn'){
+      h+='<div class="txt">掉落物 '+G.drops+' 件 · 每件 25<br>不产生销售收入</div>';
+      h+=row('卖出全部掉落物','换现金','💰'+(G.drops*25),G.drops<=0,'sellDrops');
+      h+='<div class="txt">贷款 '+Math.floor(G.loan)+' · 日息 5%'+(G.loan>4000?' · <span style="color:#ff6b6b">逾期 -2 威望/天</span>':'')+'</div>';
+      h+=row('借 1000','日息 5% · 逾期掉威望','',false,'borrow');
+      h+=row('还清贷款',(G.loan>0?'需 💰'+Math.ceil(G.loan):'无贷款'),'',G.loan<=0||G.purse<G.loan,'repay');
+    } else {
+      h+='<div class="txt">不产生收入 · 全体保安血量上限 +'+(st.level*10)+'%<br>特殊 NPC 血量过低会自动前来恢复。</div>';
+    }
+  } else {
+    var stockTxt=c.noStock?'全天候营业 · 无需补货':('库存 '+st.stock+'/'+st.maxStock+' · 补货 '+(st.restockT>0?Math.ceil(st.restockT)+'s':'—'));
+    h+='<div class="txt">'+stockTxt+' · 员工 '+st.staff+'/'+st.level+' · '+c.power+'kW<br>'+
+      (st.restockT>0?'补货中…':(c.noStock?'营业中':(st.stock<=0?'<span style="color:#ff6b6b">缺货 · 停止收入</span>':'营业中')))+
+      (c.night?' · <span style="color:#8fd3ff">夜间也营业</span>':'')+'</div>';
+    if(!c.noStock) h+=row('补货', c.restock+' 秒补满', '', st.restockT>0||st.stock>=st.maxStock,'restock:'+st.slot);
+    h+=row('招募店员','收入 +35% · 每个窗口一人','💰100',st.staff>=st.level||G.purse<100,'hireStaffAt:'+st.slot);
   }
   var upCost=Math.floor(c.cost*2*(st.level));
-  h+=row('升级 → Lv'+(st.level+1), st.level<3?('员工上限 '+(st.level+1)):'已满级', money(upCost), st.level>=3||G.purse<upCost,'upgrade:'+st.slot);
+  h+=row('升级 → Lv'+(st.level+1), st.level<3?('员工窗口 '+(st.level+1)):'已满级', money(upCost), st.level>=3||G.purse<upCost,'upgrade:'+st.slot);
   h+=row('拆除','返还 50%','',false,'demolish:'+st.slot);
   h+=foot();
   openPanel(h);
@@ -503,7 +526,21 @@ function handleAct(act){
     closePanel(); hardwareMenu(); return;
   }
   if(a==='joinNpc'){ joinNpc(v); closePanel(); return; }
-  if(a==='hireStaff'){ if(spend(100)){ G.staff++; assignStaff(); } closePanel(); homeMenu(); return; }
+  if(a==='deploy'){ deployPanel(); return; }
+  if(a==='side'){
+    var fi=parseInt(v,10);
+    if(G.fighters[fi]) G.fighters[fi].side=(p[2]||'auto');
+    deployPanel(); return;
+  }
+  if(a==='hireStaffAt'){
+    var stx=bySlot(parseInt(v,10));
+    if(stx&&stx.state==='ok'&&stx.staff<stx.level&&G.purse>=100){
+      G.purse-=100; stx.staff++; G.staff++; G.staffHired=(G.staffHired||0)+1;
+      addParts(stx.x,GY-18,6,'#7ff0c4');
+    }
+    closePanel(); shopMenu(stx||{}); return;
+  }
+  if(a==='hireStaff'){ closePanel(); homeMenu(); return; }
   if(a==='hireMelee'||a==='hireRanged'||a==='hireRobot'){
     var type=a==='hireMelee'?'melee':(a==='hireRanged'?'ranged':'robot');
     var cfg=FIGHTERS[type];
@@ -575,7 +612,7 @@ function addFighter(type){
   var md=hasShopKind('med');
   if(md) bonus+=md.level*0.1;
   var hp=Math.floor(c.hp*(1+bonus));
-  G.fighters.push({type:type, x:rr(-10,10), hp:hp, maxHp:hp, cd:0, t:rr(0,1), dmg:c.dmg, rate:c.rate, range:c.range, speed:c.speed, target:null, face:1});
+  G.fighters.push({type:type, x:rr(-10,10), hp:hp, maxHp:hp, cd:0, t:rr(0,1), dmg:c.dmg, rate:c.rate, range:c.range, speed:c.speed, target:null, face:1, side:'auto', homeOff:rr(-24,24), patrolT:0});
 }
 
 // ============================== 对话 ==============================
@@ -720,7 +757,7 @@ function placeOrder(slot){
     hp:isDef(kind)?DEFS[kind].hp:60, maxHp:isDef(kind)?DEFS[kind].hp:60,
     stock:isShop(kind)?SHOPS[kind].stock:0, maxStock:isShop(kind)?SHOPS[kind].stock:0,
     restockT:0, buildT:isShop(kind)?25:10, state:'building',
-    staff:isShop(kind)&&kind!=='pawn'?1:0, incomeT:rr(1,3), off:false, born:++G.tick,
+    staff:0, incomeT:rr(1,3), off:false, born:++G.tick,
     atkCd:0, angle:-Math.PI/2, dmgTaken:0
   };
   slot.st=st;
@@ -801,7 +838,7 @@ function updateShops(dt){
       var price=Math.floor(c.price*mult);
       st.stock--;
       G.dayRevenue+=price; G.totalRevenue+=price;
-      G.gcoins.push({x:st.x+rr(-8,8), y:GY-14, vx:rr(-16,16), vy:rr(-46,-24), val:price, life:26, t:0});
+      st.pending=(st.pending||0)+price;
       st.incomeT = c.custT/(1+0.35*st.staff);
       if(st.stock<=0) addParts(st.x,GY-16,4,'#ff6b6b');
     }
@@ -810,23 +847,19 @@ function updateShops(dt){
 
 function updateCoins(dt){
   var p=G.player;
-  for(var i=G.gcoins.length-1;i>=0;i--){
-    var c=G.gcoins[i];
-    c.t+=dt; c.life-=dt;
-    c.vy+=180*dt;
-    c.x+=c.vx*dt; c.y+=c.vy*dt;
-    if(c.y>GY-3){ c.y=GY-3; c.vy*=-0.35; c.vx*=0.6; }
-    var d=c.x-p.x;
-    if(Math.abs(d)<26 && c.y>GY-30){
-      c.x+=(-d)*Math.min(1,dt*8);
-      c.y+=((GY-8)-c.y)*Math.min(1,dt*8);
+  for(var i=0;i<slots.length;i++){
+    var st=slots[i].st;
+    if(!st||!st.pending||st.state!=='ok') continue;
+    if(Math.abs(st.x-p.x)<34){
+      var take=Math.round(st.pending);
+      st.pending=0;
+      if(take>0){
+        earn(take);
+        G.collected++;
+        G.cashPop=(G.cashPop||0)+1;
+        addParts(st.x,GY-16,5,'#ffd86b');
+      }
     }
-    if(Math.abs(d)<9 && c.y>GY-16){
-      earn(c.val); addParts(c.x,c.y,2,'#ffd86b');
-      G.collected++;
-      G.gcoins.splice(i,1); continue;
-    }
-    if(c.life<=0){ G.gcoins.splice(i,1); }
   }
 }
 
@@ -835,7 +868,55 @@ function waveCount(){ return clamp(2+Math.floor(G.day/2)+(hasNpc('man')?1:0),2,9
 function startNight(){
   G.phase='night'; G.t=NIGHT_LEN; G.speed=1;
   G.wavesLeft=waveCount(); G.waveTimer=10; G.nightDestroyed=0;
+  if(!G.intel) G.intel=planWave();
   syncHUD();
+}
+function onDuskEnter(){
+  var save=G.wavesLeft;
+  G.wavesLeft=waveCount();
+  G.intel=planWave();
+  G.wavesLeft=save;
+  if(G.fighters.length>0) deployPanel();
+}
+function typeNames(arr){
+  var m={},out=[];
+  for(var i=0;i<arr.length;i++) m[arr[i]]=(m[arr[i]]||0)+1;
+  for(var k in m){
+    var n=(ENEMY[k]||{}).name||k;
+    out.push(n+(m[k]>1?'×'+m[k]:''));
+  }
+  return out.join(' · ');
+}
+function sideBtn(i,sd,label,cur){
+  var on=cur===sd;
+  return '<button class="btn" style="padding:2px 7px;font-size:.92em;'+(on?'background:#2f6bd8;border-color:#5f9cff;color:#fff':'')+'" data-act="side:'+i+':'+sd+'">'+label+'</button>';
+}
+function deployPanel(){
+  var it=G.intel||{};
+  var h='<h3>黄昏 · 布防</h3>';
+  if(it.count){
+    h+='<div class="txt">今晚第一波：<b style="color:#ff6b6b">从'+(it.side<0?'左':'右')+'边来</b> · <b>'+it.count+'</b> 名<br>'+
+       '<span style="color:#8fd3ff">'+typeNames(it.types)+'</span></div>';
+  } else {
+    h+='<div class="txt">今晚暂无情报。</div>';
+  }
+  if(!G.fighters.length){
+    h+='<div class="txt" style="color:#7f8da8">还没有战斗人员。先回家招募再布防。</div>';
+  } else {
+    h+='<div class="txt" style="color:#7f8da8">选择每人今晚守哪一侧（自动 = 跟着敌人方向跑）。远程会站在近战与机器人身后。</div>';
+    for(var i=0;i<G.fighters.length;i++){
+      var f=G.fighters[i], cfg=FIGHTERS[f.type];
+      var sd=f.side||'auto';
+      h+='<div class="row" style="flex-wrap:wrap;gap:6px">'+
+         '<div class="l"><span>'+cfg.name+' #'+(i+1)+'</span>'+
+         '<span class="sub">HP '+Math.ceil(f.hp)+'/'+f.maxHp+' · '+(sd==='left'?'守左':(sd==='right'?'守右':'自动'))+'</span></div>'+
+         '<div class="r" style="display:flex;gap:4px">'+
+           sideBtn(i,'left','左',sd)+sideBtn(i,'auto','自动',sd)+sideBtn(i,'right','右',sd)+
+         '</div></div>';
+    }
+  }
+  h+=foot();
+  openPanel(h);
 }
 function pickEnemyType(){
   var pool=[],k;
@@ -845,12 +926,20 @@ function pickEnemyType(){
   if(t==='cyborg'&&Math.random()>0.6) t='gang';
   return t;
 }
-function spawnWave(){
+function planWave(){
   var count=2+Math.floor(G.day/3);
   var side=(G.wavesLeft%2===0)?1:-1;
+  var types=[];
+  for(var i=0;i<count;i++) types.push(pickEnemyType());
+  return {side:side,count:count,types:types};
+}
+function spawnWave(){
+  var plan=(G.wavesLeft===waveCount()&&G.intel)?G.intel:planWave();
+  var count=plan.count;
+  var side=plan.side;
   var maxX=slots[slots.length-1].x+30;
   for(var i=0;i<count;i++){
-    var type=pickEnemyType();
+    var type=plan.types[i]||'thief';
     var ec=ENEMY[type];
     var hp=Math.floor(ec.hp*(1+G.day*0.03));
     G.enemies.push({
@@ -909,9 +998,6 @@ function updateEnemies(dt){
         if(G.homeHP<=0){ destroyHome(); return; }
       }
     }
-    for(var k=G.gcoins.length-1;k>=0;k--){
-      if(Math.abs(G.gcoins[k].x-e.x)<8){ G.gcoins.splice(k,1); }
-    }
     if(Math.abs(e.x-p.x)<10 && p.inv<=0){
       p.inv=2.2;
       var loss=Math.floor(G.purse*0.15);
@@ -936,7 +1022,39 @@ function destroyHome(){
 }
 
 // ============================== 保安 ==============================
+function streetBounds(){
+  var lo=1e9, hi=-1e9, any=false;
+  for(var i=0;i<slots.length;i++){
+    var st=slots[i].st;
+    if(!st||st.state==='ruin'||st.state==='building') continue;
+    any=true;
+    if(st.x<lo) lo=st.x;
+    if(st.x>hi) hi=st.x;
+  }
+  if(!any){ lo=-50; hi=50; }
+  if(lo>-40) lo=-40;
+  if(hi<40) hi=40;
+  return {lo:lo,hi:hi};
+}
+function enemyDir(){
+  if(!G.enemies||!G.enemies.length) return 0;
+  var s=0;
+  for(var i=0;i<G.enemies.length;i++) s+=G.enemies[i].x;
+  return s>0?1:-1;
+}
+function fighterAnchor(f){
+  var b=streetBounds();
+  var side=f.side||'auto';
+  if(side==='left') return b.lo+6;
+  if(side==='right') return b.hi-6;
+  if(G.phase==='night'){
+    var d=enemyDir();
+    if(d) return d<0?b.lo+6:b.hi-6;
+  }
+  return clamp(f.homeOff||0,b.lo+6,b.hi-6);
+}
 function updateFighters(dt){
+  var b=streetBounds();
   for(var i=G.fighters.length-1;i>=0;i--){
     var f=G.fighters[i];
     if(f.hp<=0){
@@ -951,27 +1069,65 @@ function updateFighters(dt){
       if(d<bd){ bd=d; target=e; }
     }
     f.target=target;
-    if(target && bd<cfg.range+30){
+    var anchor=fighterAnchor(f);
+    var engaged = target && bd<cfg.range+45;
+    if(engaged){
+      var dir=target.x>f.x?1:-1;
+      f.face=dir;
       if(f.type==='melee'){
-        if(bd>cfg.range){ f.x+=(target.x>f.x?1:-1)*cfg.speed*dt; f.face=target.x>f.x?1:-1; }
+        if(bd>cfg.range-2){ f.x+=dir*cfg.speed*dt; }
         else {
           f.cd-=dt;
           if(f.cd<=0){ f.cd=cfg.rate; target.hp-=cfg.dmg*dmgMul('melee'); addParts(target.x,GY-10,2,'#ffd86b'); }
         }
-      } else {
-        if(bd>cfg.range){ f.x+=(target.x>f.x?1:-1)*cfg.speed*dt; f.face=target.x>f.x?1:-1; }
-        else if(bd<30){ f.x-=(target.x>f.x?1:-1)*cfg.speed*0.6*dt; }
+      } else if(f.type==='robot'){
+        if(bd>cfg.range*0.8){ f.x+=dir*cfg.speed*dt; }
         f.cd-=dt;
         if(f.cd<=0 && bd<=cfg.range){
           f.cd=cfg.rate;
-          var dir2=target.x>f.x?1:-1;
-          f.face=dir2;
-          G.projs.push({x:f.x+dir2*4, y:GY-16, vx:dir2*260, dmg:cfg.dmg*dmgMul(f.type), life:1.2, from:'f'});
+          G.projs.push({x:f.x+dir*5, y:GY-20, vx:dir*300, dmg:cfg.dmg*dmgMul('robot'), life:1.2, from:'f'});
+        }
+      } else {
+        // 远程：拉开距离，保持在自己的射程内侧
+        var want=clamp(target.x-dir*Math.min(cfg.range*0.82,88), b.lo, b.hi);
+        var dd=want-f.x;
+        if(Math.abs(dd)>5) f.x+=Math.sign(dd)*cfg.speed*dt;
+        f.cd-=dt;
+        if(f.cd<=0 && bd<=cfg.range){
+          f.cd=cfg.rate;
+          G.projs.push({x:f.x+dir*4, y:GY-17, vx:dir*280, dmg:cfg.dmg*dmgMul(f.type), life:1.2, from:'f'});
         }
       }
     } else {
-      if(Math.abs(f.x)>6) f.x+=(0>f.x?1:-1)*cfg.speed*0.7*dt;
+      // 巡逻 / 回位
+      f.patrolT=(f.patrolT||0)-dt;
+      if(f.patrolT<=0){
+        f.patrolT=rr(2.4,4.6);
+        f.patrolX=clamp(anchor+rr(-18,18), b.lo+4, b.hi-4);
+      }
+      var goal=(G.phase==='night')?anchor:(f.patrolX===undefined?anchor:f.patrolX);
+      var dx2=goal-f.x;
+      if(Math.abs(dx2)>3){
+        f.x+=Math.sign(dx2)*cfg.speed*0.7*dt;
+        f.face=Math.sign(dx2);
+        f.moving=1;
+      } else f.moving=0;
     }
+    // 远程躲在近战/机器人身后
+    if(f.type==='ranged'){
+      var face=(f.target?(f.target.x>f.x?1:-1):(f.face||1));
+      for(var q=0;q<G.fighters.length;q++){
+        var o=G.fighters[q];
+        if(!o||o===f) continue;
+        if(o.type==='melee'||o.type==='robot'){
+          if(Math.abs(o.x-f.x)<52){
+            var want2=o.x-face*17;
+            if((face>0&&f.x>want2)||(face<0&&f.x<want2)) f.x+=(want2-f.x)*Math.min(1,dt*5);
+          }
+        }
+      }
+    }
+    f.x=clamp(f.x,b.lo,b.hi);
     for(var k=0;k<G.enemies.length;k++){
       var en=G.enemies[k];
       if(Math.abs(en.x-f.x)<9){
@@ -1020,7 +1176,10 @@ function updateProjs(dt){
 function updatePhase(dt){
   if(G.phase==='day'){
     G.t-=dt*G.speed;
-    if(G.t<=0){ G.phase='dusk'; G.t=DUSK_LEN; G.speed=1; }
+    if(G.t<=0){
+      G.phase='dusk'; G.t=DUSK_LEN; G.speed=1;
+      onDuskEnter();
+    }
   } else if(G.phase==='dusk'){
     G.t-=dt*G.speed;
     if(G.t<=0){ startNight(); }
@@ -1239,10 +1398,12 @@ var TUT=[
    done:function(){ return slots.some(function(s){ return s.st; }); }},
   {id:'build', text:'施工队在建了，等它盖完（约 25 秒）', target:function(){ return {kind:'build'}; },
    done:function(){ return slots.some(function(s){ return s.st&&s.st.state==='ok'; }); }},
-  {id:'collect', text:'金币掉地上了 · 走过去<b>捡起来</b>', target:function(){ return {kind:'coin'}; },
+  {id:'collect', text:'收益存在店里 · <b>走近商店自动收进钱包</b>', target:function(){ return {kind:'shop'}; },
    done:function(){ return G.collected>0; }},
-  {id:'restock', text:'库存卖光就<b>走过去按 E 补货</b>（也可以先去招人）', target:function(){ return {kind:'shop'}; },
-   done:function(){ return G.fighters.length>0 || G.day>=2; }},
+  {id:'hireStaff', text:'走到店里按 <b>E</b>，<b>招一名店员</b>（收入 +35%）', target:function(){ return {kind:'shop'}; },
+   done:function(){ return (G.staffHired||0)>0; }},
+  {id:'restock', text:'库存卖光就<b>走过去按 E 补货</b>', target:function(){ return {kind:'shop'}; },
+   done:function(){ return G.day>=2 || slots.some(function(s){ return s.st&&s.st.restockT>0; }); }},
   {id:'hire', text:'回到<b>家</b>，按 E 招募一名保安', target:function(){ return {kind:'world', x:0, y:GY-70}; },
    done:function(){ return G.fighters.length>0; }},
   {id:'night', text:'天要黑了 · 守住这一夜，<b>你只能跑</b>', target:function(){ return {kind:'none'}; },
@@ -1281,13 +1442,25 @@ function tutTargetPos(){
     return null;
   }
   if(tg.kind==='coin'){
+    for(var ci=0;ci<slots.length;ci++){
+      var cs=slots[ci].st;
+      if(cs&&cs.pending) return {x:cs.x,y:GY-26};
+    }
     if(G.gcoins.length) return {x:G.gcoins[0].x,y:G.gcoins[0].y-8};
     for(var k=0;k<slots.length;k++){ if(slots[k].st&&isShop(slots[k].st.kind)&&slots[k].st.kind!=='pawn') return {x:slots[k].x,y:GY-46}; }
     return null;
   }
   if(tg.kind==='shop'){
-    for(var m=0;m<slots.length;m++){ if(slots[m].st&&isShop(slots[m].st.kind)) return {x:slots[m].x,y:GY-46}; }
-    return null;
+    var best2=null;
+    for(var m=0;m<slots.length;m++){
+      var ss=slots[m].st;
+      if(!ss||ss.state!=='ok'||!isShop(ss.kind)) continue;
+      if(!SHOPS[ss.kind].noIncome&&ss.staff<ss.level){ best2=ss; break; }
+      if(!best2) best2=ss;
+    }
+    if(!best2) return null;
+    var ar=SHOP_ART[best2.kind];
+    return {x:best2.x,y:GY-(ar.h0+(best2.level-1)*7)-34};
   }
   return null;
 }
@@ -1364,6 +1537,9 @@ function syncTutText(){
 var lastObj='';
 var TUTDONE=false;
 function objectiveText(){
+  if(G.phase==='dusk'&&G.intel&&G.intel.count){
+    return '<span class="step">黄昏</span> 敌人从<b>'+(G.intel.side<0?'左':'右')+'</b>边来 · '+G.intel.count+' 名 · '+typeNames(G.intel.types)+(G.fighters.length?' · <b>回家可布防</b>':'');
+  }
   var builtShops=countShops();
   var building=0;
   slots.forEach(function(s){ if(s.st&&s.st.state==='building') building++; });
@@ -1380,7 +1556,10 @@ function objectiveText(){
   slots.forEach(function(s){ if(s.st&&isShop(s.st.kind)&&s.st.kind!=='pawn'&&s.st.state==='ok'&&s.st.stock<=0&&s.st.restockT<=0) outOfStock=true; });
   if(outOfStock) return '<span class="step">补货</span> 有店缺货了（招牌冒红点）· 走过去按 E 补货';
   if(G.fighters.length===0) return '<span class="step">2/4</span> 走到<span style="color:#ffd86b">家</span>，按 E 招募一名保安（夜里要靠他）';
-  if(G.gcoins.length>0) return '<span class="step">收钱</span> 金币掉在地上了 · 走过去捡';
+  for(var pi=0;pi<slots.length;pi++){
+    var ps=slots[pi].st;
+    if(ps&&ps.pending>0&&Math.abs(ps.x-G.player.x)>=34) return '<span class="step">收钱</span> 店里有 <b>'+Math.round(ps.pending)+'</b> · 走近自动收';
+  }
   if(G.homeLevel===1&&G.totalRevenue>=LV[1].rev&&G.prestige>=LV[1].pres) return '<span class="step">3/4</span> 可以升级家了 · 回家按 E（电力 +6kW）';
   if(builtShops<2) return '<span class="step">扩张</span> 去五金店再开一家店 · 店越多收入越快';
   if(G.day<=3) return '<span class="step">4/4</span> 撑过今晚 · 威望归零才算输';
@@ -1530,6 +1709,20 @@ function text3(x,y,s,col){
   }
 }
 function text3W(s){ return s.length*4-1; }
+function text3S(x,y,s,col){
+  x=Math.round(x); y=Math.round(y);
+  for(var i=0;i<s.length;i++){
+    var g=F3[s.charAt(i)];
+    if(!g) continue;
+    var rows=g.split('/');
+    for(var r=0;r<5;r++){
+      var row=rows[r];
+      for(var c=0;c<3;c++){
+        if(row.charAt(c)==='#') S(x+i*4+c, y+r, 1,1, col);
+      }
+    }
+  }
+}
 
 // ============================== 调色板 ==============================
 var P={
@@ -1794,13 +1987,13 @@ function drawUtilities(){
 }
 
 var SHOP_ART={
-  conv: {neon:'#3ee9ff', neon2:'#7bfff0', glass:'#0b2130', w:40, h0:66, sign:'24H', label:'MART'},
-  tea:  {neon:'#ff3fa4', neon2:'#ff9cc8', glass:'#280e1c', w:40, h0:64, sign:'TEA', label:'BAR'},
-  food: {neon:'#ffc857', neon2:'#ffe9a8', glass:'#25140a', w:42, h0:66, sign:'EAT', label:'NOODLE'},
-  hotel:{neon:'#9a6bff', neon2:'#c9a8ff', glass:'#1d1430', w:44, h0:76, sign:'HOTEL', label:'ROOM'},
-  cyber:{neon:'#5ad1ff', neon2:'#b18cff', glass:'#141033', w:46, h0:70, sign:'NET', label:'CYBER CAFE'},
-  med:  {neon:'#3dffa8', neon2:'#a8ffe0', glass:'#0d2a26', w:38, h0:62, sign:'MED', label:'CLINIC'},
-  pawn: {neon:'#9a6bff', neon2:'#c9a8ff', glass:'#171029', w:38, h0:62, sign:'$', label:'PAWN'}
+  conv: {neon:'#3ee9ff', neon2:'#7bfff0', glass:'#0b2130', w:39, h0:74, sign:'24H', label:'MART'},
+  tea:  {neon:'#ff3fa4', neon2:'#ff9cc8', glass:'#280e1c', w:39, h0:72, sign:'TEA', label:'BAR'},
+  food: {neon:'#ffc857', neon2:'#ffe9a8', glass:'#25140a', w:40, h0:74, sign:'EAT', label:'NOODLE'},
+  hotel:{neon:'#9a6bff', neon2:'#c9a8ff', glass:'#1d1430', w:40, h0:84, sign:'HOTEL', label:'ROOM'},
+  cyber:{neon:'#5ad1ff', neon2:'#b18cff', glass:'#141033', w:40, h0:78, sign:'NET', label:'NET'},
+  med:  {neon:'#3dffa8', neon2:'#a8ffe0', glass:'#0d2a26', w:38, h0:70, sign:'MED', label:'CLINIC'},
+  pawn: {neon:'#9a6bff', neon2:'#c9a8ff', glass:'#171029', w:38, h0:70, sign:'$', label:'PAWN'}
 };
 
 function drawReflections(night){
@@ -2040,173 +2233,139 @@ function drawShop(st){
   var night=(G.phase==='night');
   var flick=Math.sin(G.tick*6.5+st.x*0.7)>-0.9?1:0.35;
   var off=!!st.off;
+  var noInc=!!SHOPS[st.kind].noIncome;
   var nc=off?'#39404f':neon;
   // 墙体
   R(x-w/2,top,w,h,P.wall1);
   R(x-w/2,top,w,2,P.wall3);
   A(x-w/2,top,2,h,'#1a2438',0.95);
   A(x+w/2-2,top,2,h,'#070c14',0.9);
-  // 楼层线
-  R(x-w/2,top+24,w,1,'#0b1220');
-  R(x-w/2,top+52,w,1,'#0b1220');
-  // 二层窗（竖长窗，带窗框）
-  if(h>=62){
-    for(var i2=0;i2<2;i2++){
-      var wx=x-w/2+5+i2*17;
-      R(wx-1,top+28,12,16,'#060b14');
-      R(wx,top+29,10,14,night?'#2a1c0c':'#10283c');
-      R(wx+1,top+30,8,12,night?'#ffcf6b':'#5f9fd0');
-      A(wx+1,top+30,8,4,'#ffffff',0.10);
-      A(wx+4,top+30,1,12,'#081018',0.7);
-      R(wx+1,top+37,8,1,'#081018');
-      if(night) R(wx+2,top+35,2,5,'#101724');
-    }
-  }
-  // 招牌底板
-  R(x-w/2+1,top+5,w-2,14,'#070b12');
-  R(x-w/2+1,top+5,w-2,1,rgba(nc,0.9));
+  // 招牌
+  R(x-w/2+1,top+4,w-2,14,'#070b12');
+  R(x-w/2+1,top+4,w-2,1,rgba(nc,0.9));
   R(x-w/2+1,top+17,w-2,1,rgba(nc,0.45));
-  // 招牌文字
   var t1=art.sign, t2=art.label;
   var w1=text3W(t1), w2=text3W(t2);
-  text3(x-w1/2,top+7,t1, off?'#2c3342':neon2);
-  if(w2<w-10) text3(x-w2/2,top+13,t2, off?'#232937':rgba(nc,0.9));
+  text3(x-w1/2,top+6,t1, off?'#2c3342':neon2);
+  if(w2<=w-8) text3(x-w2/2,top+12,t2, off?'#232937':rgba(nc,0.9));
   if(!off) glow(x,top+11,w*0.5,nc,0.12*flick+0.05);
   // 雨棚
-  var awnC=st.kind==='conv'?'#123241':(st.kind==='tea'?'#35102b':(st.kind==='food'?'#35220e':'#20183a'));
+  var awnC=st.kind==='conv'?'#123241':(st.kind==='tea'?'#35102b':(st.kind==='food'?'#35220e':(st.kind==='hotel'?'#241a3a':(st.kind==='cyber'?'#141a3a':(st.kind==='med'?'#0e2a24':'#20183a')))));
   R(x-w/2-1,top+19,w+2,5,awnC);
   for(var s2=0;s2<Math.floor(w/7);s2++) R(x-w/2+s2*7,top+19,4,5,off?'#262c38':rgba(nc,0.45));
   R(x-w/2-1,top+24,w+2,1,'#080d16');
-  // 店面
-  var gy0=top+25, gh=GY-gy0-3;
+  // ---------- 二层：员工窗口 ----------
+  var bandY=top+26, bandH=18;
+  if(noInc){
+    for(var d2=0;d2<2;d2++){
+      var dwx=x-w/2+7+d2*16;
+      R(dwx-1,bandY,12,bandH,'#060b14');
+      R(dwx,bandY+1,10,bandH-2,night?'#2a1c0c':'#10283c');
+      R(dwx+1,bandY+2,8,bandH-4,night?'#ffcf6b':'#5f9fd0');
+      A(dwx+1,bandY+2,8,4,'#ffffff',0.10);
+      A(dwx+5,bandY+2,1,bandH-4,'#081018',0.7);
+    }
+  } else {
+    var cap=Math.max(1,st.level);
+    var ww=(cap===1?14:11), gp=4;
+    var total=cap*ww+(cap-1)*gp;
+    var wx0=x-Math.floor(total/2);
+    for(var wi=0;wi<cap;wi++){
+      var wx3=wx0+wi*(ww+gp);
+      R(wx3-1,bandY-1,ww+2,bandH+2,'#060b14');
+      if(off){
+        R(wx3,bandY,ww,bandH,'#0c1220');
+        R(wx3,bandY,ww,1,'#1b2436');
+      } else if(wi<st.staff){
+        R(wx3,bandY,ww,bandH,'#1a1208');
+        R(wx3+1,bandY+1,ww-2,bandH-2,rgba(neon2,0.24));
+        A(wx3+1,bandY+1,ww-2,3,'#ffffff',0.10);
+        var bob2=Math.round(Math.sin(G.tick*1.8+wi)*0.6);
+        // 店员：肩 + 头 + 发
+        R(wx3+2,bandY+bandH-7+bob2,ww-4,6,'#12192a');
+        R(wx3+2,bandY+bandH-8+bob2,ww-4,2,'#3a4a6d');
+        R(wx3+Math.floor(ww/2)-2,bandY+bandH-13+bob2,4,5,'#e8bd97');
+        R(wx3+Math.floor(ww/2)-2,bandY+bandH-14+bob2,4,2,'#141a2b');
+        R(wx3+Math.floor(ww/2)-1,bandY+bandH-12+bob2,1,1,'#0a1220');
+        // 柜台
+        R(wx3+1,bandY+bandH-3,ww-2,2,'#2a2016');
+        R(wx3+1,bandY+bandH-3,ww-2,1,'#4a3a28');
+      } else {
+        // 空窗口
+        R(wx3,bandY,ww,bandH,'#0a0f18');
+        A(wx3+1,bandY+1,ww-2,bandH-2,'#0f1726',0.95);
+        A(wx3+1,bandY+bandH-2,ww-2,1,'#1b2436',0.8);
+        if(Math.sin(G.tick*2.6+wi*1.7)>0.55) A(wx3+Math.floor(ww/2)-1,bandY+6,3,3,'#4a6a8a',0.5);
+      }
+    }
+    if(st.staff>0&&!off) glow(x,bandY+bandH/2,total*0.55,neon,0.10);
+  }
+  // ---------- 店面玻璃 ----------
+  var gy0=top+46, gh=GY-gy0-3;
   R(x-w/2+2,gy0,w-4,gh,'#05090f');
   R(x-w/2+3,gy0+1,w-6,gh-2,off?'#0c1220':art.glass);
   if(!off){
-    A(x-w/2+3,gy0+1,w-6,gh-2,neon2,0.16);
-    A(x-w/2+3,gy0+1,w-6,4,'#ffffff',0.08);
+    A(x-w/2+3,gy0+1,w-6,gh-2,neon2,0.15);
+    A(x-w/2+3,gy0+1,w-6,3,'#ffffff',0.08);
     // 室内货架
-    for(var r2=0;r2<3;r2++){
-      R(x-w/2+5,gy0+6+r2*7,w-13,1,rgba(neon2,0.35));
-      for(var it=0;it<5;it++) R(x-w/2+6+it*5,gy0+4+r2*7,2,2,rgba(neon2,0.4));
+    for(var r2=0;r2<2;r2++){
+      if(gy0+8+r2*7>GY-4) break;
+      R(x-w/2+5,gy0+6+r2*7,w-14,1,rgba(neon2,0.35));
+      for(var it=0;it<4;it++) R(x-w/2+6+it*5,gy0+4+r2*7,2,2,rgba(neon2,0.4));
     }
-    // 收银台人影
-    R(x+w/2-12,gy0+5,4,gh-7,'#05090f');
-    R(x+w/2-11,gy0+3,2,2,'#05090f');
   }
   A(x-w/2+4,gy0+2,2,gh-4,'#ffffff',0.06);
   A(x+w/2-6,gy0+2,1,gh-4,'#ffffff',0.04);
   // 门
-  var dx = st.kind==='pawn'? x-6 : x+5;
-  R(dx-5,GY-24,11,24,'#060b14');
-  R(dx-4,GY-23,9,21,off?'#0c1220':rgba(neon2,0.24));
-  A(dx-4,GY-23,9,3,'#ffffff',0.09);
-  R(dx-4,GY-13,9,1,'#0a1120');
-  R(dx+2,GY-12,2,2,'#c9b06a');
-  if(!off) A(dx-5,GY-2,11,2,neon2,0.14);
-  // ---- 各店专属细节 ----
-  if(st.kind==='pawn'){
-    for(var b2=0;b2<4;b2++) R(x-w/2+6+b2*4,gy0+6,1,gh-8,'#080d16');
-    R(x+8,top+30,8,8,'#080d16');
-    R(x+9,top+31,2,2,rgba(neon,0.85));
-    R(x+13,top+31,2,2,rgba(neon,0.85));
-    R(x+11,top+34,2,2,rgba(neon,0.85));
-    // 挂着的锁与首饰
-    R(x-w/2+4,gy0+6,3,5,'#2a2038');
-    R(x-w/2+5,gy0+7,1,1,'#c9a24a');
-    R(x-w/2+4,gy0+13,4,4,'#201a30');
-  } else if(st.kind==='hotel'){
-    // 三层客房窗（暖光）
-    for(var hf=0;hf<3;hf++){
-      var wx2=x-w/2+6+hf*13;
-      R(wx2-1,top+28,11,13,'#060b14');
-      R(wx2,top+29,9,11,night?'#3a2410':'#10283c');
-      R(wx2+1,top+30,7,9,night?'#ffcf6b':'#5f9fd0');
-      A(wx2+1,top+30,7,3,'#ffffff',0.10);
-      if(night){ R(wx2+2,top+34,3,5,'#141a26'); }
-    }
-    // 竖排 HOTEL 灯箱
-    R(x+w/2-9,top+28,7,26,'#0a0e18');
-    R(x+w/2-8,top+29,5,24,'#1a1230');
-    text3(x+w/2-7,top+31,'H',' #c9a8ff'.trim());
-    text3(x+w/2-7,top+38,'O',' #c9a8ff'.trim());
-    text3(x+w/2-7,top+45,'T',' #c9a8ff'.trim());
-    glow(x+w/2-5,top+40,14,neon,0.12);
-    // 门口行李架
-    R(x-14,GY-7,9,2,'#2a2038');
-    R(x-13,GY-10,3,3,'#3a3050');
-    R(x-9,GY-9,4,2,'#3a3050');
-  } else if(st.kind==='cyber'){
-    // 大屏（LED 阵列）
-    R(x-w/2+3,top+26,w-6,14,'#06060f');
-    for(var lx=0;lx<9;lx++){
-      for(var ly=0;ly<3;ly++){
-        var lit2=((lx*7+ly*5+Math.floor(G.tick*6))%5)<2;
-        if(lit2) A(x-w/2+5+lx*4,top+28+ly*4,3,3,ly===1?neon2:neon,0.55);
-      }
-    }
-    glow(x,top+33,w*0.5,neon,0.14*(0.6+0.4*night));
-    // 门口机箱
-    R(x-16,GY-8,6,8,'#1a2038');
-    R(x-15,GY-7,4,1,'#3dffa8');
-    // 椅子剪影
-    R(x+6,GY-14,3,6,'#0d1020');
-    R(x+10,GY-12,3,4,'#0d1020');
-  } else if(st.kind==='med'){
-    // 发光绿十字
-    var cxr=x+w/2-11, cyr=top+29;
-    R(cxr-1,cyr-1,9,9,'#06120e');
-    R(cxr+1,cyr,4,7,'#3dffa8');
-    R(cxr,cyr+2,6,3,'#3dffa8');
-    glow(cxr+2,cyr+3,14,'#3dffa8',0.18+0.10*night);
-    // 药架
-    for(var mr=0;mr<3;mr++){
-      R(x-w/2+5,gy0+4+mr*6,w-20,1,'#1e3a34');
-      for(var mb=0;mb<3;mb++) R(x-w/2+6+mb*5,gy0+2+mr*6,3,2,mr%2?'#a8ffe0':'#ffffff');
-    }
-    // 门口担架
-    R(x+8,GY-6,10,2,'#c9d6d0');
-    R(x+9,GY-4,2,3,'#5a6a72');
-    R(x+15,GY-4,2,3,'#5a6a72');
-  } else if(st.kind==='food'){
-    // 两盏红灯笼
+  var dx = st.kind==='pawn'? x-6 : x+6;
+  var dh=Math.min(22,gh-2);
+  R(dx-5,GY-dh-1,11,dh+1,'#060b14');
+  R(dx-4,GY-dh,9,dh-1,off?'#0c1220':rgba(neon2,0.24));
+  A(dx-4,GY-dh,9,3,'#ffffff',0.09);
+  R(dx-4,GY-dh+Math.floor(dh/2),9,1,'#0a1120');
+  R(dx+2,GY-Math.floor(dh/2)-1,2,2,'#c9b06a');
+  if(!off) A(dx-5,GY-2,11,2,neon2,0.16);
+  // ---------- 各店招牌细节 ----------
+  if(st.kind==='food'){
     for(var ln=0;ln<2;ln++){
-      var lx2=x-w/2+7+ln*8;
-      R(lx2,top+19,4,6,'#3a1010');
-      R(lx2+1,top+20,2,4,'#ff5a4a');
-      glow(lx2+2,top+22,10,'#ff5a4a',0.16+0.10*night);
-      R(lx2+1,top+26,2,2,'#c99b58');
+      var lx2=x-w/2+4+ln*(w-10);
+      R(lx2,top+19,4,5,'#3a1010');
+      R(lx2+1,top+20,2,3,'#ff5a4a');
+      glow(lx2+2,top+22,9,'#ff5a4a',0.16+0.10*night);
     }
-    // 菜单条
-    for(var ms=0;ms<3;ms++) R(x+w/2-13+ms*4,gy0+3,2,7,'#d8c8a0');
+  } else if(st.kind==='med'){
+    var cxr=x+w/2-8, cyr=bandY+2;
+    R(cxr-1,cyr-1,8,8,'#06120e');
+    R(cxr+1,cyr,3,6,'#3dffa8');
+    R(cxr,cyr+2,5,2,'#3dffa8');
+    glow(cxr+2,cyr+2,12,'#3dffa8',0.18+0.08*night);
+  } else if(st.kind==='cyber'){
+    R(x-w/2,top+25,w,1,rgba(neon,0.85));
+    for(var cg=0;cg<10;cg++){
+      if(Math.sin(G.tick*4+cg)>0) A(x-w/2+2+cg*4,top+26,3,2,neon2,0.5);
+    }
+  } else if(st.kind==='hotel'){
+    R(x+w/2-8,top+28,6,16,'#0a0e18');
+    R(x+w/2-7,top+29,4,14,'#1a1230');
+    text3(x+w/2-6,top+30,'H','#c9a8ff');
+    text3(x+w/2-6,top+36,'O','#c9a8ff');
+    glow(x+w/2-5,top+34,10,neon,0.12);
   } else if(st.kind==='tea'){
-    // 菜单板
-    R(x-w/2+4,top+26,13,10,'#0a0e18');
-    R(x-w/2+5,top+27,11,8,'#241a2c');
-    for(var mt=0;mt<3;mt++) R(x-w/2+6,top+28+mt*2,7,1,rgba(neon2,0.6));
-    // 杯架
-    R(x+7,GY-11,7,2,'#2a1a26');
-    for(var cp=0;cp<3;cp++) R(x+8+cp*2,GY-13,1,2,rgba(neon2,0.7));
-  } else if(st.kind==='conv'){
-    // 促销贴纸
-    R(x-15,gy0+3,5,4,rgba(neon,0.35));
-    R(x-15,gy0+8,5,2,rgba(neon,0.25));
-    R(x+8,gy0+3,4,6,rgba('#ff3fa4',0.25));
-  }
-  // 店员（站在玻璃后）
-  if(isShop(st.kind)&&st.staff>0&&st.state==='ok'&&!off&&st.kind!=='pawn'&&st.kind!=='med'){
-    var sx6=x-w/2+8, sy6=GY-3;
-    R(sx6-3,sy6-12,6,9,'#1a2438');
-    R(sx6-2,sy6-14,4,4,'#e8bd97');
-    R(sx6-2,sy6-16,4,2,'#141a2b');
-    R(sx6-3,sy6-8,6,1,rgba(neon2,0.5));
-    A(sx6-2,sy6-14,4,4,'#000',0.35);
+    R(x-w/2+3,bandY+2,9,10,'#0a0e18');
+    R(x-w/2+4,bandY+3,7,8,'#241a2c');
+    for(var mt=0;mt<3;mt++) R(x-w/2+5,bandY+4+mt*2,5,1,rgba(neon2,0.6));
+  } else if(st.kind==='pawn'){
+    for(var b2=0;b2<5;b2++) R(x-w/2+5+b2*4,gy0+4,1,gh-6,'#0a0e18');
+    R(x+8,bandY+2,8,8,'#0a0e18');
+    R(x+9,bandY+3,2,2,rgba(neon,0.85));
+    R(x+13,bandY+3,2,2,rgba(neon,0.85));
+    R(x+11,bandY+6,2,2,rgba(neon,0.85));
   }
   // 空调外机
-  R(x+w/2-10,top+30,7,6,'#1e2739');
-  R(x+w/2-9,top+31,5,1,'#33465e');
-  R(x+w/2-9,top+33,5,1,'#33465e');
-  R(x+w/2-9,top+35,5,1,'#33465e');
-  // 屋顶广告灯箱
+  R(x+w/2-10,gy0+2,7,6,'#1e2739');
+  R(x+w/2-9,gy0+3,5,1,'#33465e');
+  R(x+w/2-9,gy0+5,5,1,'#33465e');
+  // 屋顶灯箱
   if(st.level>=2){
     R(x-w/2+4,top-8,w-8,7,'#080c14');
     R(x-w/2+4,top-8,w-8,1,rgba(neon,0.7));
@@ -2214,12 +2373,12 @@ function drawShop(st){
     if(!off) glow(x,top-5,w*0.3,neon,0.10);
   }
   // 缺货
-  if(st.stock<=0&&st.restockT<=0&&st.kind!=='pawn'){
+  if(st.stock<=0&&st.restockT<=0&&!noInc){
     var bob=Math.round(Math.sin(G.tick*4)*1);
-    R(x-8,top-12+bob,16,10,'#140810');
-    R(x-7,top-11+bob,14,8,'#ff5a4a');
-    text3(x-5,top-9+bob,'SOLD', '#2a0a10');
-    glow(x,top-6+bob,12,'#ff5a4a',0.2);
+    R(x-8,top-14+bob,16,10,'#140810');
+    R(x-7,top-13+bob,14,8,'#ff5a4a');
+    text3(x-5,top-11+bob,'SOLD','#2a0a10');
+    glow(x,top-8+bob,12,'#ff5a4a',0.2);
   }
   // 补货进度
   if(st.restockT>0){
@@ -2228,6 +2387,17 @@ function drawShop(st){
     R(x-rw/2,GY-2,rw,2,'#18202f');
     R(x-rw/2,GY-2,rw*clamp(rp,0,1),2,'#7ff0c4');
     A(x-rw/2,GY-2,rw*clamp(rp,0,1),1,'#c8ffe8',0.6);
+  }
+  // 店内待收金额
+  if(st.pending>1&&!off){
+    var pn=Math.round(st.pending), pt=''+pn, pw2=text3W(pt);
+    var py=GY-h-22+Math.round(Math.sin(G.tick*3+st.x)*1.5);
+    A(x-pw2/2-7,py-2,pw2+14,10,'#0a0f18',0.78);
+    R(x-pw2/2-7,py-2,pw2+14,1,'#ffc857');
+    R(x-pw2/2-6,py+1,4,4,'#c9a24a');
+    R(x-pw2/2-5,py+2,2,2,'#ffd86b');
+    text3(x-pw2/2+1,py,pt,'#ffd86b');
+    glow(x,py+2,12,'#ffc857',0.12);
   }
   // 断电
   if(off){
@@ -2804,7 +2974,7 @@ function drawPrompt(){
   var y=GY-44;
   if(it.t==='home'){ y=Math.max(40,GY-(84+(G.homeLevel>3?8:0)+(G.homeLevel>5?8:0))-16); }
   else if(it.t==='hardware'){ y=GY-62-14; }
-  else if(it.t==='shop'){ y=GY-(SHOP_ART[it.st.kind].h0+(it.st.level-1)*7)-16; }
+  else if(it.t==='shop'){ y=GY-(SHOP_ART[it.st.kind].h0+(it.st.level-1)*7)-36; }
   else if(it.t==='zhou'){ y=GY-50; }
   var bob=Math.round(Math.sin(G.tick*2.4)*1.5);
   A(x-7,y+bob,14,12,'#3ee9ff',0.10);
@@ -2819,17 +2989,7 @@ function drawPrompt(){
 }
 
 function drawCoins(){
-  for(var i=0;i<G.gcoins.length;i++){
-    var c=G.gcoins[i];
-    var t=Math.sin(G.tick*3.4+i*1.1);
-    var w=Math.max(2,Math.abs(t)*3+1.5);
-    var yy=c.y+Math.round(Math.sin(G.tick*4+i)*1);
-    A(c.x-w/2,yy+1,w,4,'#c98f1a',0.3);
-    R(c.x-w/2,yy,w,4,'#ffd86b');
-    R(c.x-w/2,yy,w,1,'#fff3c4');
-    R(c.x-w/2,yy+3,w,1,'#b8822a');
-    glow(c.x,yy+2,7,'#ffc857',0.18);
-  }
+  // 金额已显示在商店屋顶，这里保留空实现（兼容旧调用）
 }
 
 function drawParts(){
@@ -3197,6 +3357,26 @@ function buildSheet(name){
 window.__SHEET__=function(name){ return buildSheet(name); };
 window.__SHEET_NAMES__=function(){ var a=[]; for(var k in SHEET_DEFS) a.push(k); return a; };
 
+function drawDuskIntel(){
+  if(G.phase!=='dusk'||!G.intel) return;
+  var left=G.intel.side<0;
+  var x=left?10:VW-10;
+  var a=0.55+0.35*Math.sin(G.tick*4);
+  var cy=GY-42;
+  ctx.fillStyle=rgba('#ff5a4a',a);
+  ctx.beginPath();
+  if(left){ ctx.moveTo(x-5,cy); ctx.lineTo(x+6,cy-8); ctx.lineTo(x+6,cy+8); }
+  else { ctx.moveTo(x+5,cy); ctx.lineTo(x-6,cy-8); ctx.lineTo(x-6,cy+8); }
+  ctx.closePath();
+  ctx.fill();
+  var tx=left?(x+13):(x-13-((''+G.intel.count).length*4-1));
+  text3S(tx,cy-2,'x'+G.intel.count,'#ff8f5a');
+  // 顶部提示条
+  A(0,10,VW,9,'#0a0f1a',0.55);
+  var label=left?'ENEMY LEFT':'ENEMY RIGHT';
+  text3S(VW/2-text3W(label)/2,12,label,'#ff8f5a');
+}
+
 // ============================== 主绘制 ==============================
 function draw(){
   ox=-Math.round(G.camX)+VW/2;
@@ -3224,6 +3404,7 @@ function draw(){
   drawParts();
   drawPrompt();
   drawTutArrow();
+  drawDuskIntel();
   drawNightOverlay();
   drawRain();
   drawBloom();
@@ -3257,8 +3438,9 @@ function loop(ts){
     if(G.phase==='day'||G.phase==='dusk'||G.phase==='night') updateShops(sdt);
     updateCoins(sdt);
     if(G.phase==='night'){
-      updateEnemies(dt); updateFighters(dt); updateTurrets(dt); updateProjs(dt);
+      updateEnemies(dt); updateTurrets(dt); updateProjs(dt);
     }
+    updateFighters(dt);
     if(G.flash>0) G.flash-=dt;
     for(var i=G.parts.length-1;i>=0;i--){
       var p=G.parts[i]; p.life-=dt; p.x+=p.vx*dt; p.y+=p.vy*dt; p.vy+=200*dt;
@@ -3269,7 +3451,7 @@ function loop(ts){
     syncObjective();
     checkNpcTasks();
   }
-  draw();
+  if(!window.__NODRAW__) draw();
   requestAnimationFrame(loop);
 }
 
@@ -3299,8 +3481,7 @@ if(q.indexOf('demo')>=0){
   dbgBuild('pawn',212);
   addFighter('melee'); addFighter('melee'); addFighter('ranged');
   G.fighters.forEach(function(f,i){ f.x=-20+i*20; });
-  G.gcoins.push({x:70,y:GY-6,vx:0,vy:0,val:14,life:20,t:0});
-  G.gcoins.push({x:120,y:GY-6,vx:0,vy:0,val:22,life:20,t:0});
+  G.gcoins.length=0;
   G.player.x=0; G.camX=0;
   recomputePower();
   if(q.indexOf('night')>=0){
@@ -3337,7 +3518,7 @@ window.__DBG__={
   startNight:startNight, spawnWave:spawnWave, endNight:endNight, newDay:newDay,
   destroyHome:destroyHome, recomputePower:recomputePower, addFighter:addFighter,
   setKey:setKey, setSpeed:setSpeed, closePanel:closePanel, bySlot:bySlot,
-  get panel(){return panel;}, get keys(){return keys;},
+  get panel(){return panel;}, get panelWrap(){return panelWrap;}, get keys(){return keys;},
   hitTest:hitTest, pressStart:pressStart, pressEnd:pressEnd, installTouch:installTouch,
   get tutIndex(){return tutIndex;}, get tutActive(){return tutActive;},
   setTut:function(i){ tutIndex=i; tutActive=true; }, skipTut:function(){ tutActive=false; }

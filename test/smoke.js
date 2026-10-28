@@ -103,10 +103,12 @@ function step(n, ms) {
 const secs = s => step(Math.round(s * 60), 16.7);
 
 function run(label, fn) {
+  var t0 = Date.now();
   try { fn(); log.push('OK   ' + label); }
   catch (e) { log.push('FAIL ' + label + ' :: ' + e.message); }
 }
 
+sandbox.window.__NODRAW__ = true;
 const D = sandbox.window.__DBG__;
 const G = sandbox.window.__GAME__;
 
@@ -115,6 +117,15 @@ function act(a) { D.handleAct(a); if (D.menuOpen) D.closePanel(); step(2); }
 function unpause() { if (D.menuOpen) D.closePanel(); G.paused = false; }
 
 log.push('loaded ok, G.day=' + G.day + ' slots=' + D.slots.length);
+
+run('render every phase without throwing', () => {
+  sandbox.window.__NODRAW__ = false;
+  for (const ph of ['day', 'dusk', 'night']) {
+    G.phase = ph; G.t = 30; step(3);
+  }
+  G.phase = 'day';
+  sandbox.window.__NODRAW__ = true;
+});
 
 run('start game', () => { act('startGame'); unpause(); step(5); });
 
@@ -351,6 +362,65 @@ run('8 day endurance run', () => {
     if (D.menuOpen) { act('settleGo'); }
     unpause();
   }
+});
+
+
+run('hire staff at the shop (home cannot hire)', () => {
+  D.handleAct('restart'); if (D.menuOpen) D.closePanel();
+  unpause();
+  G.purse = 5000; G.day = 2; G.phase = 'day'; G.paused = false;
+  act('order:conv');
+  const slot = D.slots.find(s => !s.st);
+  D.placeOrder(slot);
+  unpause(); secs(30);
+  const st = slot.st;
+  if (!st || st.kind !== 'conv' || st.state !== 'ok') throw new Error('shop not built');
+  if (st.staff !== 0) throw new Error('new shop should start with 0 staff, got ' + st.staff);
+  st.pending = 0;
+  const before = G.purse;
+  D.handleAct('hireStaffAt:' + st.slot);
+  if (D.menuOpen) D.closePanel();
+  if (st.staff !== 1) throw new Error('staff not hired: ' + st.staff);
+  if (before - G.purse !== 100) throw new Error('charge wrong: ' + (before - G.purse) + ' purse=' + G.purse);
+});
+
+run('income accrues at shop then auto-collects on approach', () => {
+  const st = D.slots.find(s => s.st && s.st.kind === 'conv' && s.st.state === 'ok').st;
+  st.stock = st.maxStock; st.pending = 0; st.off = false;
+  G.phase = 'day'; unpause();
+  G.player.x = 400; G.camX = 400;
+  secs(10);
+  if (!(st.pending > 0)) throw new Error('no pending income');
+  if (G.gcoins.length) throw new Error('coins should no longer drop');
+  const p0 = G.purse;
+  G.player.x = st.x; G.camX = st.x;
+  secs(1);
+  if (!(G.purse > p0)) throw new Error('not collected (' + p0 + ' -> ' + G.purse + ') px=' + G.player.x + ' sx=' + st.x + ' pending=' + st.pending + ' phase=' + G.phase + ' paused=' + G.paused);
+  if (Math.round(st.pending) !== 0) throw new Error('pending not cleared');
+});
+
+run('tap outside closes the panel', () => {
+  G.phase = 'day'; G.over = false;
+  D.hardwareMenu();
+  if (!D.menuOpen) throw new Error('panel not open');
+  const w = D.panelWrap;
+  w._fire('pointerdown', { clientX: 4, clientY: 4 });
+  w._fire('click', { target: w, clientX: 4, clientY: 4 });
+  if (D.menuOpen) throw new Error('panel still open');
+});
+
+run('fighters patrol instead of standing still', () => {
+  G.phase = 'day'; G.enemies.length = 0;
+  G.fighters.length = 0;
+  D.addFighter('melee');
+  const f = G.fighters[G.fighters.length - 1];
+  if (!f) throw new Error('addFighter produced nothing (len=' + G.fighters.length + ' cap=' + D.G.homeLevel + ')');
+  f.x = 240; f.homeOff = 0; f.patrolT = 0; f.patrolX = undefined;
+  unpause();
+  const x0 = f.x;
+  secs(4);
+  if (Math.abs(f.x - x0) < 2) throw new Error('fighter did not move (x=' + f.x.toFixed(1) + ')');
+  const b = D.streetBounds ? D.streetBounds() : null;
 });
 
 console.log(log.join('\n'));
