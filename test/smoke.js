@@ -240,8 +240,12 @@ run('night starts and locks speed', () => {
 });
 
 run('night spawns waves', () => {
+  const w0 = G.wavesLeft, k0 = G.kills;
   unpause(); secs(30);
-  if (G.enemies.length === 0) throw new Error('no enemies, wavesLeft=' + G.wavesLeft);
+  // 敌人可能已被保安击杀，因此以"波次减少或出现敌人或产生击杀"为准
+  if (!(G.wavesLeft < w0 || G.enemies.length > 0 || G.kills > k0)) {
+    throw new Error('no wave spawned, wavesLeft=' + G.wavesLeft);
+  }
 });
 
 run('turret damages and kills a lone enemy', () => {

@@ -121,6 +121,8 @@
         <button class="btn on" data-sp="1">1×</button>
         <button class="btn" data-sp="2">2×</button>
         <button class="btn" data-sp="4">4×</button>
+        <button class="btn" id="deployBtn">布防</button>
+        <button class="btn" id="pauseBtn">II</button>
         <button class="btn" id="skipBtn" style="display:none">跳过</button>
         <button class="btn" id="flipBtn">翻转</button>
         <button class="btn" id="helpBtn">?</button>
@@ -309,7 +311,7 @@ function reset(){
     player:{x:0, vx:0, face:1, walk:0, inv:0},
     fighters:[], enemies:[], customers:[], gcoins:[], parts:[], projs:[],
     order:null, zhou:null, zhouJoined:false, zhouTask:false,
-    street:[], joined:{}, npcDay:{}, loan:0,
+    street:[], joined:{}, npcDay:{}, loan:0, deployOpened:false, userPaused:false,
     drops:0, defsBuilt:0, destroyedNight:0, waveTimer:0, wavesLeft:0, waveGap:22,
     longDay:false, kills:0, staff:0, rain:false, flash:0,
     settle:null, over:false, started:false, story:0, nightDestroyed:0,
@@ -320,6 +322,7 @@ function reset(){
   for(var k1 in NG) G[k1]=NG[k1];
   for(var i=0;i<slots.length;i++) slots[i].st=null;
   syncHUD();
+  if(window.__syncPauseBtn) window.__syncPauseBtn();
 }
 
 // ============================== 工具 ==============================
@@ -893,12 +896,13 @@ function sideBtn(i,sd,label,cur){
 }
 function deployPanel(){
   var it=G.intel||{};
-  var h='<h3>黄昏 · 布防</h3>';
+  G.deployOpened=true;
+  var h='<h3>'+(G.phase==='dusk'?'黄昏 · 布防':'布防 · 调度')+'</h3>';
   if(it.count){
     h+='<div class="txt">今晚第一波：<b style="color:#ff6b6b">从'+(it.side<0?'左':'右')+'边来</b> · <b>'+it.count+'</b> 名<br>'+
        '<span style="color:#8fd3ff">'+typeNames(it.types)+'</span></div>';
   } else {
-    h+='<div class="txt">今晚暂无情报。</div>';
+    h+='<div class="txt" style="color:#7f8da8">白天没有情报 · 黄昏时会刷新第一波的方位与阵容。</div>';
   }
   if(!G.fighters.length){
     h+='<div class="txt" style="color:#7f8da8">还没有战斗人员。先回家招募再布防。</div>';
@@ -907,7 +911,7 @@ function deployPanel(){
     for(var i=0;i<G.fighters.length;i++){
       var f=G.fighters[i], cfg=FIGHTERS[f.type];
       var sd=f.side||'auto';
-      h+='<div class="row" style="flex-wrap:wrap;gap:6px">'+
+      h+='<div class="row" style="flex-wrap:wrap;gap:6px;padding:5px 8px">'+
          '<div class="l"><span>'+cfg.name+' #'+(i+1)+'</span>'+
          '<span class="sub">HP '+Math.ceil(f.hp)+'/'+f.maxHp+' · '+(sd==='left'?'守左':(sd==='right'?'守右':'自动'))+'</span></div>'+
          '<div class="r" style="display:flex;gap:4px">'+
@@ -1032,8 +1036,9 @@ function streetBounds(){
     if(st.x>hi) hi=st.x;
   }
   if(!any){ lo=-50; hi=50; }
-  if(lo>-40) lo=-40;
-  if(hi<40) hi=40;
+  // 至少覆盖家两侧一段，保证有活动空间
+  if(lo>-110) lo=-110;
+  if(hi<110) hi=110;
   return {lo:lo,hi:hi};
 }
 function enemyDir(){
@@ -1042,19 +1047,32 @@ function enemyDir(){
   for(var i=0;i<G.enemies.length;i++) s+=G.enemies[i].x;
   return s>0?1:-1;
 }
-function fighterAnchor(f){
-  var b=streetBounds();
-  var side=f.side||'auto';
-  if(side==='left') return b.lo+6;
-  if(side==='right') return b.hi-6;
-  if(G.phase==='night'){
-    var d=enemyDir();
-    if(d) return d<0?b.lo+6:b.hi-6;
+// 每帧重排站位：同侧的人左右错开，近战/机器人靠外、远程靠内
+function assignFighterSpots(b){
+  var d=enemyDir();
+  var left=[], right=[];
+  for(var i=0;i<G.fighters.length;i++){
+    var f=G.fighters[i];
+    var side=f.side||'auto';
+    if(side==='auto') side=(G.phase==='night'&&d)?(d<0?'left':'right'):((f.homeOff||0)<0?'left':'right');
+    f._side=side;
+    (side==='left'?left:right).push(f);
   }
-  return clamp(f.homeOff||0,b.lo+6,b.hi-6);
+  function rank(f){ return (f.type==='melee'||f.type==='robot')?0:1; }
+  left.sort(function(a,c){ return rank(a)-rank(c); });
+  right.sort(function(a,c){ return rank(a)-rank(c); });
+  var gap=15;
+  for(var l=0;l<left.length;l++) left[l]._anchor=b.lo+8+l*gap;
+  for(var r=0;r<right.length;r++) right[r]._anchor=b.hi-8-r*gap;
+}
+function patrolRange(f,b){
+  if(G.phase==='night') return {lo:Math.max(b.lo,f._anchor-16),hi:Math.min(b.hi,f._anchor+16)};
+  if(f._side==='left') return {lo:b.lo+4,hi:Math.max(b.lo+40,Math.min(0,b.hi-4))};
+  return {lo:Math.min(b.hi-40,Math.max(0,b.lo+4)),hi:b.hi-4};
 }
 function updateFighters(dt){
   var b=streetBounds();
+  assignFighterSpots(b);
   for(var i=G.fighters.length-1;i>=0;i--){
     var f=G.fighters[i];
     if(f.hp<=0){
@@ -1069,7 +1087,7 @@ function updateFighters(dt){
       if(d<bd){ bd=d; target=e; }
     }
     f.target=target;
-    var anchor=fighterAnchor(f);
+    var anchor=f._anchor;
     var engaged = target && bd<cfg.range+45;
     if(engaged){
       var dir=target.x>f.x?1:-1;
@@ -1102,8 +1120,9 @@ function updateFighters(dt){
       // 巡逻 / 回位
       f.patrolT=(f.patrolT||0)-dt;
       if(f.patrolT<=0){
-        f.patrolT=rr(2.4,4.6);
-        f.patrolX=clamp(anchor+rr(-18,18), b.lo+4, b.hi-4);
+        f.patrolT=rr(2.6,5.2);
+        var pr=patrolRange(f,b);
+        f.patrolX=rr(pr.lo,pr.hi);
       }
       var goal=(G.phase==='night')?anchor:(f.patrolX===undefined?anchor:f.patrolX);
       var dx2=goal-f.x;
@@ -1112,20 +1131,6 @@ function updateFighters(dt){
         f.face=Math.sign(dx2);
         f.moving=1;
       } else f.moving=0;
-    }
-    // 远程躲在近战/机器人身后
-    if(f.type==='ranged'){
-      var face=(f.target?(f.target.x>f.x?1:-1):(f.face||1));
-      for(var q=0;q<G.fighters.length;q++){
-        var o=G.fighters[q];
-        if(!o||o===f) continue;
-        if(o.type==='melee'||o.type==='robot'){
-          if(Math.abs(o.x-f.x)<52){
-            var want2=o.x-face*17;
-            if((face>0&&f.x>want2)||(face<0&&f.x<want2)) f.x+=(want2-f.x)*Math.min(1,dt*5);
-          }
-        }
-      }
     }
     f.x=clamp(f.x,b.lo,b.hi);
     for(var k=0;k<G.enemies.length;k++){
@@ -1377,6 +1382,19 @@ for(var i=0;i<spBtns.length;i++){
   (function(b){ b.addEventListener('click',function(){ setSpeed(parseInt(b.dataset.sp,10)); }); })(spBtns[i]);
 }
 $('skipBtn').addEventListener('click',function(){ if(G.phase==='dusk'){ startNight(); } });
+var pBtn=$('pauseBtn');
+function syncPauseBtn(){
+  if(!pBtn) return;
+  if(G.userPaused) pBtn.classList.add('on'); else pBtn.classList.remove('on');
+  pBtn.textContent=G.userPaused?'\u25B6':'II';
+}
+if(pBtn) pBtn.addEventListener('click',function(){
+  G.userPaused=!G.userPaused;
+  syncPauseBtn();
+});
+var dBtn=$('deployBtn');
+if(dBtn) dBtn.addEventListener('click',function(){ deployPanel(); });
+window.__syncPauseBtn=function(){ G.userPaused=false; syncPauseBtn(); };
 $('helpBtn').addEventListener('click',function(){ helpPanel(); });
 $('flipBtn').addEventListener('click',function(){
   gameEl.classList.toggle('alt');
@@ -1406,6 +1424,8 @@ var TUT=[
    done:function(){ return G.day>=2 || slots.some(function(s){ return s.st&&s.st.restockT>0; }); }},
   {id:'hire', text:'回到<b>家</b>，按 E 招募一名保安', target:function(){ return {kind:'world', x:0, y:GY-70}; },
    done:function(){ return G.fighters.length>0; }},
+  {id:'deploy', text:'点右上 <b>布防</b>，给保安选「守左 / 守右 / 自动」', target:function(){ return {kind:'dom', id:'deployBtn'}; },
+   done:function(){ return !!G.deployOpened; }},
   {id:'night', text:'天要黑了 · 守住这一夜，<b>你只能跑</b>', target:function(){ return {kind:'none'}; },
    done:function(){ return G.day>=2 || G.phase==='night'; }}
 ];
@@ -1538,7 +1558,7 @@ var lastObj='';
 var TUTDONE=false;
 function objectiveText(){
   if(G.phase==='dusk'&&G.intel&&G.intel.count){
-    return '<span class="step">黄昏</span> 敌人从<b>'+(G.intel.side<0?'左':'右')+'</b>边来 · '+G.intel.count+' 名 · '+typeNames(G.intel.types)+(G.fighters.length?' · <b>回家可布防</b>':'');
+    return '<span class="step">黄昏</span> 敌人从<b>'+(G.intel.side<0?'左':'右')+'</b>边来 · '+G.intel.count+' 名 · '+typeNames(G.intel.types)+(G.fighters.length?' · <b>右上「布防」</b>':'');
   }
   var builtShops=countShops();
   var building=0;
@@ -1692,7 +1712,7 @@ var F3={
  'U':'#.#/#.#/#.#/#.#/###','V':'#.#/#.#/#.#/#.#/.#.','W':'#.#/#.#/###/###/#.#',
  'X':'#.#/#.#/.#./#.#/#.#','Y':'#.#/#.#/.#./.#./.#.','Z':'###/..#/.#./#../###',
  '-':'.../.../###/.../...','.':'.../.../.../.../.#.',':':'.../.#./.../.#./...',
- '/':'..#/..#/.#./#../#..',' ':'.../.../.../.../...','+':'.../.#./###/.#./...'
+ '/':'..#/..#/.#./#../#..',' ':'.../.../.../.../...','+':'.../.#./###/.#./...','!':'.#./.#./.#./.../.#.'
 };
 function text3(x,y,s,col){
   x=Math.round(x); y=Math.round(y);
@@ -1976,9 +1996,8 @@ function drawUtilities(){
     if(!st) continue;
     var col='#101826';
     if(st.state==='ok') col = st.off?'#3a1c2c':'#123a4e';
-    R(s.x-8,uy-1,16,1,col);
-    R(s.x-1,uy,1,13,col);
-    R(s.x-2,uy+12,4,1,col);
+    R(s.x-1,uy,1,12,col);
+    R(s.x-2,uy+11,3,1,col);
     if(st.state==='ok'&&!st.off){
       A(s.x-1,uy+1,1,10,'#3ee9ff',0.14);
       A(s.x-2,uy+12,4,1,'#3ee9ff',0.25);
@@ -2366,19 +2385,23 @@ function drawShop(st){
   R(x+w/2-9,gy0+3,5,1,'#33465e');
   R(x+w/2-9,gy0+5,5,1,'#33465e');
   // 屋顶灯箱
-  if(st.level>=2){
+  if(st.level>=2&&st.stock>0){
     R(x-w/2+4,top-8,w-8,7,'#080c14');
     R(x-w/2+4,top-8,w-8,1,rgba(neon,0.7));
     text3(x-w/2+7,top-6,st.level>=3?'OPEN':'NEW', off?'#2c3342':neon);
     if(!off) glow(x,top-5,w*0.3,neon,0.10);
   }
-  // 缺货
+  // 缺货：屋顶红色感叹号
   if(st.stock<=0&&st.restockT<=0&&!noInc){
-    var bob=Math.round(Math.sin(G.tick*4)*1);
-    R(x-8,top-14+bob,16,10,'#140810');
-    R(x-7,top-13+bob,14,8,'#ff5a4a');
-    text3(x-5,top-11+bob,'SOLD','#2a0a10');
-    glow(x,top-8+bob,12,'#ff5a4a',0.2);
+    var bob=Math.round(Math.sin(G.tick*4)*1.2);
+    var pulse=0.6+0.4*Math.sin(G.tick*5);
+    var ey=GY-h-30+bob;
+    R(x-6,ey,12,14,'#2a0a10');
+    R(x-5,ey+1,10,12,'#ff3a3a');
+    R(x-5,ey+1,10,1,'#ff8a8a');
+    text3(x-1,ey+3,'!','#ffffff');
+    R(x-1,ey+9,3,2,'#ffffff');
+    glow(x,ey+7,14,'#ff3a3a',0.22*pulse+0.12);
   }
   // 补货进度
   if(st.restockT>0){
@@ -2391,7 +2414,7 @@ function drawShop(st){
   // 店内待收金额
   if(st.pending>1&&!off){
     var pn=Math.round(st.pending), pt=''+pn, pw2=text3W(pt);
-    var py=GY-h-22+Math.round(Math.sin(G.tick*3+st.x)*1.5);
+    var py=GY-h-18+Math.round(Math.sin(G.tick*3+st.x)*1.5);
     A(x-pw2/2-7,py-2,pw2+14,10,'#0a0f18',0.78);
     R(x-pw2/2-7,py-2,pw2+14,1,'#ffc857');
     R(x-pw2/2-6,py+1,4,4,'#c9a24a');
@@ -3404,6 +3427,13 @@ function draw(){
   drawParts();
   drawPrompt();
   drawTutArrow();
+  if(G.userPaused){
+    A(0,0,VW,VH,'#04060d',0.45);
+    var ptxt='PAUSED';
+    text3S(VW/2-text3W(ptxt)/2,GY-40,ptxt,'#8fd3ff');
+    var psub='PRESS II TO RESUME';
+    text3S(VW/2-text3W(psub)/2,GY-30,psub,'#4a6a8a');
+  }
   drawDuskIntel();
   drawNightOverlay();
   drawRain();
@@ -3431,7 +3461,7 @@ function loop(ts){
   if(!last) last=ts;
   var dt=(ts-last)/1000; last=ts;
   if(dt>0.1) dt=0.1;
-  if(!G.paused && G.started && !G.over){
+  if(!G.paused && !G.userPaused && G.started && !G.over){
     G.tick+=dt;
     var sdt=dt*(G.phase==='night'?1:G.speed);
     updatePlayer(sdt);
