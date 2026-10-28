@@ -159,16 +159,50 @@ var clamp=function(v,a,b){return v<a?a:(v>b?b:v);};
 var rr=function(a,b){return a+Math.random()*(b-a);};
 
 var SHOPS={
-  conv:{name:'便利店', cost:200, restock:8,  stock:40, power:2, price:12, custT:5.0, c1:'#2f5fb8', c2:'#6ea8ff', c3:'#0d1a33'},
-  tea: {name:'奶茶店', cost:320, restock:5,  stock:30, power:2, price:18, custT:4.0, c1:'#b83f76', c2:'#ff8fbf', c3:'#2a0f1e'},
-  food:{name:'小饭馆', cost:420, restock:10, stock:36, power:3, price:15, custT:4.5, c1:'#b8642a', c2:'#ffb86e', c3:'#2b1708'},
-  pawn:{name:'当铺',   cost:380, restock:0,  stock:0,  power:1, price:0,  custT:0,   c1:'#6a4fb8', c2:'#b79bff', c3:'#1a1230'}
+  conv: {name:'便利店', cost:200, restock:8,  stock:40, power:2, price:12, custT:5.0, day:1, night:false},
+  tea:  {name:'奶茶店', cost:320, restock:5,  stock:30, power:2, price:18, custT:4.0, day:1, night:false},
+  food: {name:'小饭馆', cost:420, restock:10, stock:36, power:3, price:15, custT:4.5, day:2, night:false},
+  hotel:{name:'旅馆',   cost:520, restock:12, stock:24, power:2, price:26, custT:6.0, day:8, night:true},
+  cyber:{name:'网吧',   cost:640, restock:0,  stock:999,power:4, price:22, custT:3.2, day:8, night:true, noStock:true},
+  med:  {name:'药房',   cost:600, restock:0,  stock:0,  power:2, price:0,  custT:0,   day:15, night:false, noIncome:true},
+  pawn: {name:'当铺',   cost:380, restock:0,  stock:0,  power:1, price:0,  custT:0,   day:1, night:false, noIncome:true}
 };
 var DEFS={
-  barricade:{name:'路障', cost:120, power:0, hp:150, c1:'#8a6a3a', c2:'#c79b58'},
-  spike:    {name:'地刺', cost:150, power:0, hp:100, c1:'#7a8290', c2:'#c3ccda'},
-  turret:   {name:'炮塔', cost:450, power:3, hp:130, c1:'#5a6a86', c2:'#9fb3d1'}
+  barricade:{name:'路障',   cost:120, power:0, hp:150, day:1},
+  spike:    {name:'地刺',   cost:150, power:0, hp:100, day:2},
+  camera:   {name:'摄像头', cost:220, power:1, hp:60,  day:4, range:64},
+  zapdoor:  {name:'电击门', cost:380, power:3, hp:90,  day:15},
+  turret:   {name:'炮塔',   cost:450, power:3, hp:130, day:8}
 };
+// 敌人表：day = 最早出现天数
+var ENEMY={
+  thief:  {name:'小偷',       hp:20,  dmg:4,  speed:22, drop:1, day:1,  val:1},
+  smasher:{name:'砸店党',     hp:40,  dmg:8,  speed:16, drop:2, day:4,  val:2},
+  biker:  {name:'飞车党',     hp:30,  dmg:6,  speed:64, drop:2, day:8,  val:2},
+  gang:   {name:'黑帮',       hp:80,  dmg:10, speed:18, drop:3, day:15, val:3, breaker:true},
+  mole:   {name:'内鬼',       hp:35,  dmg:7,  speed:26, drop:2, day:22, val:2, sneaky:true},
+  cyborg: {name:'赛博改造人', hp:200, dmg:16, speed:20, drop:4, day:30, val:5, tough:true},
+  captain:{name:'清街队队长', hp:150, dmg:20, speed:28, drop:6, day:35, val:8, boss:true}
+};
+// 八位特殊 NPC：门槛 → 任务 → 入队能力
+var NPCS=[
+  {id:'zhou',name:'老周',role:'建造',color:'#c9963f',day:4,
+   ability:'拆建免费 · 防御升级 -40%',task:'建成 3 座防御设施'},
+  {id:'bao', name:'阿豹',role:'战斗',color:'#d2603a',kills:30,
+   ability:'近战伤害 +50% · 夜间可召 2 名打手',task:'累计击杀 30 名敌人'},
+  {id:'chen',name:'老陈',role:'战斗',color:'#5f7a5a',day:8,
+   ability:'全体战斗人员伤害 +25%',task:'累计击杀 60 名敌人'},
+  {id:'mei', name:'梅姐',role:'金融',color:'#b8486e',pawnLv:2,
+   ability:'小金库利息 ×3',task:'还清贷款且存款达 30000'},
+  {id:'ni',  name:'阿霓',role:'防御',color:'#4fc6c0',need:'cyber',rev:8000,
+   ability:'炮塔射程 +30% · 摄像头覆盖 +50%',task:'累计营业额达 20000'},
+  {id:'yu',  name:'小雨',role:'经营',color:'#7ec8e8',need:'med',needLv:2,
+   ability:'全街自动补货 · 店员逃跑变待岗',task:'5 天内无战斗人员死亡'},
+  {id:'man', name:'小满',role:'经营',color:'#e8a0d0',need:'food',needLv:2,
+   ability:'客流 +50% · 夜间多 1 波敌人',task:'单日营业额达 5000'},
+  {id:'zero',name:'零号',role:'真相',color:'#8f8fa8',lv:6,npc:5,
+   ability:'解锁真结局路径',task:'守过 40 天'}
+];
 var CFG={};
 (function(){var k;for(k in SHOPS)CFG[k]=SHOPS[k];for(k in DEFS)CFG[k]=DEFS[k];})();
 var isShop=function(k){return !!SHOPS[k];};
@@ -275,6 +309,7 @@ function reset(){
     player:{x:0, vx:0, face:1, walk:0, inv:0},
     fighters:[], enemies:[], customers:[], gcoins:[], parts:[], projs:[],
     order:null, zhou:null, zhouJoined:false, zhouTask:false,
+    street:[], joined:{}, npcDay:{}, loan:0,
     drops:0, defsBuilt:0, destroyedNight:0, waveTimer:0, wavesLeft:0, waveGap:22,
     longDay:false, kills:0, staff:0, rain:false, flash:0,
     settle:null, over:false, started:false, story:0, nightDestroyed:0,
@@ -393,21 +428,24 @@ function hardwareMenu(){
   G.hardwareOpened=true;
   var h='<h3>五金店</h3><div class="txt">下单后走到空位按 E 放置。施工期间工地可能被破坏。</div>';
   var k;
-  var shopKeys=['conv','tea','food','pawn'];
-  var defKeys=['barricade','spike','turret'];
+  var shopKeys=['conv','tea','food','hotel','cyber','med','pawn'];
+  var defKeys=['barricade','spike','camera','zapdoor','turret'];
   h+='<div class="txt" style="color:#8fd3ff">商店 '+countShops()+'/'+capShops()+'</div>';
   for(var i=0;i<shopKeys.length;i++){
     k=shopKeys[i];
     var c=SHOPS[k];
-    var dis=G.purse<c.cost||countShops()>=capShops();
-    h+=row(c.name,'日库存 '+c.stock+' · 补货 '+c.restock+'s · '+c.power+'kW',money(c.cost),dis,'order:'+k);
+    var locked=c.day>G.day;
+    var dis=locked||G.purse<c.cost||countShops()>=capShops();
+    var sub=locked?('第 '+c.day+' 天解锁'):('日库存 '+(c.noStock?'∞':c.stock)+' · 补货 '+(c.restock||'—')+'s · '+c.power+'kW'+(c.night?' · 夜间营业':''));
+    h+=row(c.name,sub,money(c.cost),dis,'order:'+k);
   }
   h+='<div class="txt" style="color:#8fd3ff">防御 '+countDefs()+'/'+capDefs()+'</div>';
   for(var j=0;j<defKeys.length;j++){
     k=defKeys[j];
     var d=DEFS[k];
-    var dis2=G.purse<d.cost||countDefs()>=capDefs();
-    h+=row(d.name,'耐久 '+d.hp+' · '+d.power+'kW',money(d.cost),dis2,'order:'+k);
+    var lk=d.day>G.day;
+    var dis2=lk||G.purse<d.cost||countDefs()>=capDefs();
+    h+=row(d.name,lk?('第 '+d.day+' 天解锁'):('耐久 '+d.hp+' · '+d.power+'kW'),money(d.cost),dis2,'order:'+k);
   }
   if(G.order){
     h+='<div class="txt" style="color:#ffd86b">已下单：'+CFG[G.order.kind].name+' · 走到空位按 E 放置</div>';
@@ -433,6 +471,9 @@ function shopMenu(st){
   } else if(st.kind==='pawn'){
     h+='<div class="txt">掉落物 '+G.drops+' 件 · 每件 25<br>不产生销售收入</div>';
     h+=row('卖出全部掉落物','换现金','💰'+(G.drops*25),G.drops<=0,'sellDrops');
+    h+='<div class="txt">贷款 '+Math.floor(G.loan)+' · 日息 5%'+(G.loan>4000?' · <span style="color:#ff6b6b">逾期 -2 威望/天</span>':'')+'</div>';
+    h+=row('借 1000','日息 5% · 逾期掉威望','',false,'borrow');
+    h+=row('还清贷款',(G.loan>0?'需 💰'+Math.ceil(G.loan):'无贷款'),'',G.loan<=0||G.purse<G.loan,'repay');
   }
   var upCost=Math.floor(c.cost*2*(st.level));
   h+=row('升级 → Lv'+(st.level+1), st.level<3?('员工上限 '+(st.level+1)):'已满级', money(upCost), st.level>=3||G.purse<upCost,'upgrade:'+st.slot);
@@ -456,6 +497,12 @@ function handleAct(act){
     }
     closePanel(); homeMenu(); return;
   }
+  if(a==='borrow'){ G.purse+=1000; G.loan+=1000; closePanel(); hardwareMenu(); return; }
+  if(a==='repay'){
+    if(G.loan>0&&G.purse>=G.loan){ G.purse-=Math.ceil(G.loan); G.loan=0; prestige(2); }
+    closePanel(); hardwareMenu(); return;
+  }
+  if(a==='joinNpc'){ joinNpc(v); closePanel(); return; }
   if(a==='hireStaff'){ if(spend(100)){ G.staff++; assignStaff(); } closePanel(); homeMenu(); return; }
   if(a==='hireMelee'||a==='hireRanged'||a==='hireRobot'){
     var type=a==='hireMelee'?'melee':(a==='hireRanged'?'ranged':'robot');
@@ -467,6 +514,7 @@ function handleAct(act){
   }
   if(a==='order'){
     var kind=v, c=CFG[kind];
+    if(c.day&&c.day>G.day){ closePanel(); hardwareMenu(); return; }
     var dis = G.purse<c.cost || (isShop(kind)?countShops()>=capShops():countDefs()>=capDefs());
     if(!dis){ G.purse-=c.cost; G.order={kind:kind,cost:c.cost}; syncHUD(); }
     closePanel(); hardwareMenu(); return;
@@ -524,6 +572,8 @@ function addFighter(type){
   var bonus=0, pa=null;
   slots.forEach(function(s){ if(s.st&&s.st.kind==='pawn'&&s.st.state==='ok') pa=s.st; });
   if(pa) bonus=pa.level*0.1;
+  var md=hasShopKind('med');
+  if(md) bonus+=md.level*0.1;
   var hp=Math.floor(c.hp*(1+bonus));
   G.fighters.push({type:type, x:rr(-10,10), hp:hp, maxHp:hp, cd:0, t:rr(0,1), dmg:c.dmg, rate:c.rate, range:c.range, speed:c.speed, target:null, face:1});
 }
@@ -553,6 +603,112 @@ function zhouDialog(){
     return;
   }
   dialogBox('老周',['“还差 '+(3-countDefs())+' 座。别急，慢慢来。”'],'close');
+}
+
+
+// ============================== 特殊 NPC 系统 ==============================
+function hasNpc(id){
+  if(id==='zhou') return !!G.zhouJoined;
+  return !!(G.joined&&G.joined[id]);
+}
+function joinedCount(){
+  var n=(G.zhouJoined?1:0);
+  for(var k in G.joined) if(G.joined[k]) n++;
+  return n;
+}
+function hasShopKind(kind,lv){
+  for(var i=0;i<slots.length;i++){
+    var st=slots[i].st;
+    if(st&&st.state==='ok'&&st.kind===kind&&(!lv||st.level>=lv)) return st;
+  }
+  return null;
+}
+function npcMet(n){
+  if(n.id==='zhou') return false;
+  if(n.day&&G.day<n.day) return false;
+  if(n.kills&&G.kills<n.kills) return false;
+  if(n.rev&&G.totalRevenue<n.rev) return false;
+  if(n.lv&&G.homeLevel<n.lv) return false;
+  if(n.npc&&joinedCount()<n.npc) return false;
+  if(n.pawnLv&&!hasShopKind('pawn',n.pawnLv)) return false;
+  if(n.need&&!hasShopKind(n.need,n.needLv)) return false;
+  return true;
+}
+var NPC_SPOT=[-22,24,-90,92,-154,156,-218,220];
+function checkNpcSpawns(){
+  if(!G.street) G.street=[];
+  for(var i=0;i<NPCS.length;i++){
+    var n=NPCS[i];
+    if(n.id==='zhou'||hasNpc(n.id)) continue;
+    var on=false;
+    for(var j=0;j<G.street.length;j++) if(G.street[j].id===n.id) on=true;
+    if(on) continue;
+    if(!npcMet(n)) continue;
+    var x=NPC_SPOT[G.street.length%NPC_SPOT.length];
+    G.street.push({id:n.id,x:x});
+    if(!G.npcDay) G.npcDay={};
+    G.npcDay[n.id]=G.day;
+  }
+}
+function npcTaskDone(n){
+  if(n.id==='bao') return G.kills>=30;
+  if(n.id==='chen') return G.kills>=60;
+  if(n.id==='mei') return G.loan<=0&&G.vault>=30000;
+  if(n.id==='ni') return G.totalRevenue>=20000;
+  if(n.id==='yu') return (G.day-(G.npcDay[n.id]||G.day))>=4;
+  if(n.id==='man') return G.dayRevenue>=5000;
+  if(n.id==='zero') return G.day>=40;
+  return false;
+}
+function npcProgress(n){
+  if(n.id==='bao') return Math.min(30,G.kills)+'/30';
+  if(n.id==='chen') return Math.min(60,G.kills)+'/60';
+  if(n.id==='mei') return '存款 '+Math.floor(G.vault)+'/30000 · 贷款 '+Math.floor(G.loan);
+  if(n.id==='ni') return Math.floor(G.totalRevenue)+'/20000';
+  if(n.id==='yu') return '已过 '+(G.day-(G.npcDay[n.id]||G.day))+'/4 天';
+  if(n.id==='man') return '今日 '+G.dayRevenue+'/5000';
+  if(n.id==='zero') return G.day+'/40 天';
+  return '';
+}
+function npcDialogOnStreet(item){
+  var n=NPCS_BY_ID[item.id];
+  if(!n) return;
+  if(npcTaskDone(n)){
+    dialogBox(n.name+' · 入队',[
+      '“'+n.task+'——你做到了。”',
+      '能力：'+n.ability
+    ],'joinNpc:'+n.id,'让他加入');
+  } else {
+    dialogBox(n.name,[
+      n.ability,
+      '条件：'+n.task+'（'+npcProgress(n)+'）'
+    ],'close');
+  }
+}
+function joinNpc(id){
+  var n=NPCS_BY_ID[id];
+  if(!n||hasNpc(id)) return;
+  G.joined[id]=true;
+  var arr=[];
+  for(var i=0;i<G.street.length;i++) if(G.street[i].id!==id) arr.push(G.street[i]);
+  G.street=arr;
+  prestige(10);
+  G.flash=0.2;
+}
+function checkNpcTasks(){}
+function dmgMul(type){
+  var m=1;
+  if(hasNpc('chen')) m*=1.25;
+  if(type==='melee'&&hasNpc('bao')) m*=1.5;
+  return m;
+}
+function camBoost(st){
+  var r=64*(hasNpc('ni')?1.5:1);
+  for(var i=0;i<slots.length;i++){
+    var o=slots[i].st;
+    if(o&&o.state==='ok'&&o.kind==='camera'&&!o.off&&Math.abs(o.x-st.x)<r) return 1.4;
+  }
+  return 1;
 }
 
 // ============================== 建造 ==============================
@@ -595,6 +751,7 @@ function nearestInteract(){
   cand(0,{t:'home'},30);
   cand(-52,{t:'hardware'},26);
   if(G.zhou && !G.zhouJoined) cand(-36,{t:'zhou'},18);
+  if(G.street) for(var n1=0;n1<G.street.length;n1++) cand(G.street[n1].x,{t:'npc',npc:G.street[n1]},16);
   for(var i=0;i<slots.length;i++){
     var s=slots[i];
     if(s.st) cand(s.x,{t:'shop',st:s.st},20);
@@ -608,6 +765,7 @@ function doInteract(){
   var it=nearestInteract();
   if(!it) return;
   if(it.t==='zhou'){ zhouDialog(); return; }
+  if(it.t==='npc'){ npcDialogOnStreet(it.npc); return; }
   if(it.t==='home'){ homeMenu(); return; }
   if(it.t==='hardware'){ hardwareMenu(); return; }
   if(it.t==='shop'){ shopMenu(it.st); return; }
@@ -630,13 +788,16 @@ function updateShops(dt){
       if(st.restockT<=0){ st.stock=st.maxStock; }
       continue;
     }
-    if(!isShop(st.kind)||st.kind==='pawn') continue;
-    if(st.off) continue;
-    if(st.stock<=0) continue;
+    if(hasNpc('yu')&&isShop(st.kind)&&!SHOPS[st.kind].noIncome) st.stock=st.maxStock;
+    if(!isShop(st.kind)) continue;
     var c=SHOPS[st.kind];
+    if(c.noIncome) continue;
+    if(G.phase==='night'&&!c.night) continue;
+    if(st.off) continue;
+    if(!c.noStock&&st.stock<=0) continue;
     st.incomeT-=dt;
     if(st.incomeT<=0){
-      var mult=(1+0.35*st.staff)*(1+G.prestige/500);
+      var mult=(1+0.35*st.staff)*(1+G.prestige/500)*(hasNpc('man')?1.5:1);
       var price=Math.floor(c.price*mult);
       st.stock--;
       G.dayRevenue+=price; G.totalRevenue+=price;
@@ -670,24 +831,32 @@ function updateCoins(dt){
 }
 
 // ============================== 夜晚 ==============================
-function waveCount(){ return clamp(2+Math.floor(G.day/2),2,8); }
+function waveCount(){ return clamp(2+Math.floor(G.day/2)+(hasNpc('man')?1:0),2,9); }
 function startNight(){
   G.phase='night'; G.t=NIGHT_LEN; G.speed=1;
   G.wavesLeft=waveCount(); G.waveTimer=10; G.nightDestroyed=0;
   syncHUD();
+}
+function pickEnemyType(){
+  var pool=[],k;
+  for(k in ENEMY){ if(ENEMY[k].day<=G.day) pool.push(k); }
+  var t=pool[Math.floor(Math.random()*pool.length)]||'thief';
+  if(t==='captain'&&Math.random()>0.4) t='gang';
+  if(t==='cyborg'&&Math.random()>0.6) t='gang';
+  return t;
 }
 function spawnWave(){
   var count=2+Math.floor(G.day/3);
   var side=(G.wavesLeft%2===0)?1:-1;
   var maxX=slots[slots.length-1].x+30;
   for(var i=0;i<count;i++){
-    var type=(G.day>=4 && Math.random()<0.45)?'smasher':'thief';
-    var hp=type==='smasher'?40:20;
-    hp=Math.floor(hp*(1+G.day*0.04));
+    var type=pickEnemyType();
+    var ec=ENEMY[type];
+    var hp=Math.floor(ec.hp*(1+G.day*0.03));
     G.enemies.push({
-      type:type, x:side*(maxX+i*14), hp:hp, maxHp:hp,
-      dmg:type==='smasher'?8:4, speed:type==='smasher'?16:22,
-      cd:0, hitCd:0, face:-side, target:null, stealT:0
+      type:type, x:side*(maxX+i*16), hp:hp, maxHp:hp,
+      dmg:ec.dmg, speed:ec.speed, drop:ec.drop,
+      cd:0, hitCd:0, face:-side, target:null, stealT:0, boss:!!ec.boss
     });
   }
   G.wavesLeft--;
@@ -698,7 +867,12 @@ function updateEnemies(dt){
   var p=G.player;
   for(var i=G.enemies.length-1;i>=0;i--){
     var e=G.enemies[i];
-    if(e.hp<=0){ G.kills++; G.drops+=(e.type==='smasher'?2:1); addParts(e.x,GY-8,6,'#ff5a4a'); G.enemies.splice(i,1); continue; }
+    if(e.hp<=0){
+      G.kills++; G.drops+=((ENEMY[e.type]||{}).drop||1);
+      if(e.boss) prestige(2);
+      addParts(e.x,GY-8,e.boss?14:6,'#ff5a4a');
+      G.enemies.splice(i,1); continue;
+    }
     var dir = e.x>0?-1:1;
     e.face=dir;
     var tgt=null, bestd=1e9;
@@ -717,7 +891,7 @@ function updateEnemies(dt){
         addParts(tgt.x+rr(-6,6),GY-14,2,'#ffb86e');
         if(tgt.hp<=0){
           tgt.state='ruin'; tgt.hp=0;
-          if(isShop(tgt.kind)&&tgt.staff>0) G.staff=Math.max(0,G.staff-tgt.staff);
+          if(isShop(tgt.kind)&&tgt.staff>0&&!hasNpc('yu')) G.staff=Math.max(0,G.staff-tgt.staff);
           G.nightDestroyed++; G.destroyedNight++;
           prestige(-12);
           recomputePower();
@@ -782,7 +956,7 @@ function updateFighters(dt){
         if(bd>cfg.range){ f.x+=(target.x>f.x?1:-1)*cfg.speed*dt; f.face=target.x>f.x?1:-1; }
         else {
           f.cd-=dt;
-          if(f.cd<=0){ f.cd=cfg.rate; target.hp-=cfg.dmg; addParts(target.x,GY-10,2,'#ffd86b'); }
+          if(f.cd<=0){ f.cd=cfg.rate; target.hp-=cfg.dmg*dmgMul('melee'); addParts(target.x,GY-10,2,'#ffd86b'); }
         }
       } else {
         if(bd>cfg.range){ f.x+=(target.x>f.x?1:-1)*cfg.speed*dt; f.face=target.x>f.x?1:-1; }
@@ -792,7 +966,7 @@ function updateFighters(dt){
           f.cd=cfg.rate;
           var dir2=target.x>f.x?1:-1;
           f.face=dir2;
-          G.projs.push({x:f.x+dir2*4, y:GY-16, vx:dir2*260, dmg:cfg.dmg, life:1.2, from:'f'});
+          G.projs.push({x:f.x+dir2*4, y:GY-16, vx:dir2*260, dmg:cfg.dmg*dmgMul(f.type), life:1.2, from:'f'});
         }
       }
     } else {
@@ -817,7 +991,7 @@ function updateTurrets(dt){
       var e=G.enemies[j], d=Math.abs(e.x-st.x);
       if(d<bd){ bd=d; target=e; }
     }
-    if(target && bd<76){
+    if(target && bd<76*(hasNpc('ni')?1.3:1)*camBoost(st)){
       st.angle=Math.atan2(0, target.x-st.x);
       st.atkCd-=dt;
       if(st.atkCd<=0){
@@ -865,7 +1039,7 @@ function endNight(homeLost){
   G.phase='settle';
   G.enemies.length=0; G.projs.length=0;
   var salary=G.staff*60+G.fighters.length*40;
-  var interest=Math.floor(G.vault*0.02);
+  var interest=Math.floor(G.vault*0.02*(hasNpc('mei')?3:1));
   var pre=0;
   if(!homeLost) pre+=10+2*waveCount();
   if(G.dayRevenue>=G.dayTarget) pre+=8;
@@ -895,9 +1069,19 @@ function newDay(){
   for(var i=0;i<slots.length;i++){
     var st=slots[i].st;
     if(!st) continue;
-    if(st.state==='ok'&&isShop(st.kind)&&st.kind!=='pawn'){ st.stock=st.maxStock; st.restockT=0; }
+    if(st.state==='ok'&&isShop(st.kind)&&!SHOPS[st.kind].noIncome&&!SHOPS[st.kind].noStock){ st.stock=st.maxStock; st.restockT=0; }
   }
   if(G.day>=4 && !G.zhou && !G.zhouJoined){ G.zhou={x:-36}; }
+  // 贷款计息
+  if(G.loan>0){
+    G.loan=Math.ceil(G.loan*1.05);
+    if(G.loan>4000){ prestige(-2); }
+  }
+  // 保安每日治疗
+  for(var f2=0;f2<G.fighters.length;f2++){
+    G.fighters[f2].hp=Math.min(G.fighters[f2].maxHp,G.fighters[f2].hp+Math.floor(G.fighters[f2].maxHp*0.35));
+  }
+  checkNpcSpawns();
   G.enemies.length=0; G.projs.length=0;
   recomputePower(); syncHUD();
 }
@@ -1242,335 +1426,1350 @@ function tutorialStart(){
 }
 
 
+// ============================== 美术基础 ==============================
+// ============================== 美术基础 ==============================
+// ============================== 美术基础 ==============================
+// ============================== 美术基础 ==============================
 var ox=0;
-function R(x,y,w,h,c){ ctx.fillStyle=c; ctx.fillRect(Math.round(x+ox),Math.round(y),w,h); }
-var SKYM=[0,0,0];
-function drawSky(){
-  var night=0;
-  if(G.phase==='night') night=1;
-  else if(G.phase==='dusk') night=clamp(1-(G.t/DUSK_LEN),0,1)*0.55;
-  var top=[10,15,38], mid=[32,38,70], bot=[74,58,86];
-  var dtop=[54,86,140], dmid=[120,150,190], dbot=[196,168,180];
-  for(var y=0;y<GY;y++){
-    var t=y/GY, c, dc;
-    if(t<0.5){
-      var k=t/0.5;
-      c=[top[0]+(mid[0]-top[0])*k, top[1]+(mid[1]-top[1])*k, top[2]+(mid[2]-top[2])*k];
-      dc=[dtop[0]+(dmid[0]-dtop[0])*k, dtop[1]+(dmid[1]-dtop[1])*k, dtop[2]+(dmid[2]-dtop[2])*k];
-    } else {
-      var k2=(t-0.5)/0.5;
-      c=[mid[0]+(bot[0]-mid[0])*k2, mid[1]+(bot[1]-mid[1])*k2, mid[2]+(bot[2]-mid[2])*k2];
-      dc=[dmid[0]+(dbot[0]-dmid[0])*k2, dmid[1]+(dbot[1]-dmid[1])*k2, dmid[2]+(dbot[2]-dmid[2])*k2];
-    }
-    var f=[c[0]+(dc[0]-c[0])*(1-night), c[1]+(dc[1]-c[1])*(1-night), c[2]+(dc[2]-c[2])*(1-night)];
-    if(y===Math.floor(GY*0.62)) SKYM=f;
-    ctx.fillStyle='rgb('+(f[0]|0)+','+(f[1]|0)+','+(f[2]|0)+')';
-    ctx.fillRect(0,y,VW,1);
-  }
-  if(night>0.4){
-    for(var i=0;i<40;i++){
-      var sx=((i*97+13)%VW), sy=((i*53+7)%80);
-      var a=(Math.sin(G.tick*0.05+i)*0.5+0.5);
-      ctx.fillStyle='rgba(220,235,255,'+(a*0.8*night).toFixed(2)+')';
-      ctx.fillRect(sx,sy,1,1);
-    }
-  }
-  var moonX=40+((G.day*37)%(VW-80));
-  var sunX=30+((G.day*53)%(VW-60));
-  if(night<0.5){
-    var sa=1-night*2;
-    ctx.fillStyle='rgba(255,225,150,'+(0.9*sa).toFixed(2)+')';
-    ctx.beginPath(); ctx.arc(sunX,34,8,0,6.283); ctx.fill();
-    ctx.fillStyle='rgba(255,245,200,'+(0.55*sa).toFixed(2)+')';
-    ctx.beginPath(); ctx.arc(sunX,34,12,0,6.283); ctx.fill();
-  }
-  if(night>0.15){
-    ctx.fillStyle='rgba(230,236,255,'+(night).toFixed(2)+')';
-    ctx.beginPath(); ctx.arc(moonX,30,9,0,6.283); ctx.fill();
-    ctx.fillStyle='rgba(10,15,38,'+(night).toFixed(2)+')';
-    ctx.beginPath(); ctx.arc(moonX-4,27,8,0,6.283); ctx.fill();
+// 世界空间（跟随相机）
+function R(x,y,w,h,c){ if(w<=0||h<=0) return; ctx.fillStyle=c; ctx.fillRect(Math.round(x+ox),Math.round(y),Math.round(w),Math.round(h)); }
+function A(x,y,w,h,c,a){ if(a<=0||w<=0||h<=0) return; ctx.globalAlpha=a; ctx.fillStyle=c; ctx.fillRect(Math.round(x+ox),Math.round(y),Math.round(w),Math.round(h)); ctx.globalAlpha=1; }
+// 屏幕空间（不跟随相机）
+function S(x,y,w,h,c){ if(w<=0||h<=0) return; ctx.fillStyle=c; ctx.fillRect(Math.round(x),Math.round(y),Math.round(w),Math.round(h)); }
+function SA(x,y,w,h,c,a){ if(a<=0||w<=0||h<=0) return; ctx.globalAlpha=a; ctx.fillStyle=c; ctx.fillRect(Math.round(x),Math.round(y),Math.round(w),Math.round(h)); ctx.globalAlpha=1; }
+
+var _RC={};
+function rgba(c,a){
+  var k=c+'|'+a;
+  if(_RC[k]) return _RC[k];
+  var r=parseInt(c.substr(1,2),16), g=parseInt(c.substr(3,2),16), b=parseInt(c.substr(5,2),16);
+  return _RC[k]='rgba('+r+','+g+','+b+','+a+')';
+}
+
+function mkCanvas(w,h){
+  try{
+    var c=document.createElement('canvas');
+    if(!c||typeof c.getContext!=='function') return null;
+    c.width=w; c.height=h;
+    var g=c.getContext('2d');
+    if(!g) return null;
+    g.imageSmoothingEnabled=false;
+    return {c:c,g:g};
+  }catch(e){ return null; }
+}
+
+var _GLOW={};
+function glowSpr(col){
+  if(_GLOW[col]!==undefined) return _GLOW[col];
+  var s=mkCanvas(32,32);
+  if(!s){ _GLOW[col]=null; return null; }
+  var g=s.g, grd=g.createRadialGradient(16,16,0,16,16,16);
+  grd.addColorStop(0,rgba(col,0.95));
+  grd.addColorStop(0.3,rgba(col,0.42));
+  grd.addColorStop(0.65,rgba(col,0.12));
+  grd.addColorStop(1,rgba(col,0));
+  g.fillStyle=grd; g.fillRect(0,0,32,32);
+  _GLOW[col]=s.c; return s.c;
+}
+function _blit(s,x,y,r,a){
+  if(!s||a<=0) return;
+  ctx.globalCompositeOperation='lighter';
+  ctx.globalAlpha=a;
+  ctx.drawImage(s,Math.round(x-r),Math.round(y-r),Math.round(r*2),Math.round(r*2));
+  ctx.globalAlpha=1;
+  ctx.globalCompositeOperation='source-over';
+}
+function glow(x,y,r,col,a){ _blit(glowSpr(col),x+ox,y,r,a); }
+function glowS(x,y,r,col,a){ _blit(glowSpr(col),x,y,r,a); }
+
+function shadowAt(x,w,a){
+  A(x-w/2,GY-1,w,2,'#000',a||0.45);
+  A(x-w/2+2,GY,w-4,1,'#000',(a||0.45)*0.5);
+}
+function wetPool(x,w,col,a){
+  A(x-w/2,GY+1,w,1,col,a);
+  A(x-w/2+2,GY+2,w-4,1,col,a*0.55);
+  A(x-w/2+5,GY+3,w-10,1,col,a*0.28);
+}
+function wetStreak(x,w,col,a){
+  for(var i=0;i<3;i++){
+    var ww=Math.max(2,w-i*3);
+    A(x-ww/2+((i%2)?1:-1),GY+2+i*3,ww,2,col,a*(1-i*0.3));
   }
 }
 
-var skyline=null;
+// ============================== 3x5 像素字体 ==============================
+var F3={
+ '0':'###/#.#/#.#/#.#/###','1':'.#./##./.#./.#./###','2':'###/..#/###/#../###',
+ '3':'###/..#/.##/..#/###','4':'#.#/#.#/###/..#/..#','5':'###/#../###/..#/###',
+ '6':'###/#../###/#.#/###','7':'###/..#/..#/..#/..#','8':'###/#.#/###/#.#/###',
+ '9':'###/#.#/###/..#/###','A':'.#./#.#/###/#.#/#.#','B':'##./#.#/##./#.#/##.',
+ 'C':'###/#../#../#../###','D':'##./#.#/#.#/#.#/##.','E':'###/#../###/#../###',
+ 'F':'###/#../###/#../#..','G':'###/#../#.#/#.#/###','H':'#.#/#.#/###/#.#/#.#',
+ 'I':'###/.#./.#./.#./###','J':'..#/..#/..#/#.#/###','K':'#.#/#.#/##./#.#/#.#',
+ 'L':'#../#../#../#../###','M':'#.#/###/###/#.#/#.#','N':'#.#/###/###/###/#.#',
+ 'O':'###/#.#/#.#/#.#/###','P':'###/#.#/###/#../#..','Q':'###/#.#/#.#/###/..#',
+ 'R':'###/#.#/##./#.#/#.#','S':'###/#../###/..#/###','T':'###/.#./.#./.#./.#.',
+ 'U':'#.#/#.#/#.#/#.#/###','V':'#.#/#.#/#.#/#.#/.#.','W':'#.#/#.#/###/###/#.#',
+ 'X':'#.#/#.#/.#./#.#/#.#','Y':'#.#/#.#/.#./.#./.#.','Z':'###/..#/.#./#../###',
+ '-':'.../.../###/.../...','.':'.../.../.../.../.#.',':':'.../.#./.../.#./...',
+ '/':'..#/..#/.#./#../#..',' ':'.../.../.../.../...','+':'.../.#./###/.#./...'
+};
+function text3(x,y,s,col){
+  x=Math.round(x); y=Math.round(y);
+  for(var i=0;i<s.length;i++){
+    var g=F3[s.charAt(i)];
+    if(!g) continue;
+    var rows=g.split('/');
+    for(var r=0;r<5;r++){
+      var row=rows[r];
+      for(var c=0;c<3;c++){
+        if(row.charAt(c)==='#') R(x+i*4+c, y+r, 1,1, col);
+      }
+    }
+  }
+}
+function text3W(s){ return s.length*4-1; }
+
+// ============================== 调色板 ==============================
+var P={
+  ink:'#04060d',
+  wall0:'#0d1220', wall1:'#141b2c', wall2:'#1c263c', wall3:'#27334c', wall4:'#38496a', wall5:'#4d6288',
+  dark:'#090d18',
+  skin:'#e8bd97', skinD:'#bd8a67', skinL:'#ffd9b4',
+  hair:'#141a2b', hairD:'#0a0e1a',
+  coat:'#2b3f6a', coatD:'#19243f', coatL:'#496c9f',
+  cyan:'#3ee9ff', mag:'#ff3fa4', vio:'#9a6bff', amber:'#ffc857', green:'#3dffa8', red:'#ff5a4a'
+};
+
+// ============================== 天空 ==============================
+var SKY_N=[[7,6,18],[18,13,42],[48,22,62],[104,38,78]];
+var SKY_D=[[104,124,158],[158,178,200],[226,208,190],[250,224,196]];
+var _SKYC={};
+function skyRow(t,night){
+  var key=(Math.round(night*10)*1000)+Math.round(t*130);
+  var v=_SKYC[key];
+  if(v) return v;
+  var arr=[],i;
+  for(i=0;i<4;i++){
+    arr.push(SKY_N[i][0]+(SKY_D[i][0]-SKY_N[i][0])*(1-night));
+    arr.push(SKY_N[i][1]+(SKY_D[i][1]-SKY_N[i][1])*(1-night));
+    arr.push(SKY_N[i][2]+(SKY_D[i][2]-SKY_N[i][2])*(1-night));
+  }
+  var seg=t*3, k=Math.min(2,Math.floor(seg)), f=seg-k;
+  var c0=k*3, c1=c0+3;
+  v='rgb('+Math.round(arr[c0]+(arr[c1]-arr[c0])*f)+','+
+        Math.round(arr[c0+1]+(arr[c1+1]-arr[c0+1])*f)+','+
+        Math.round(arr[c0+2]+(arr[c1+2]-arr[c0+2])*f)+')';
+  _SKYC[key]=v; return v;
+}
+
+function drawSky(){
+  var night = G.phase==='night'?1:(G.phase==='dusk'?clamp(1-(G.t/DUSK_LEN),0,1)*0.7:0);
+  for(var y=0;y<GY;y++) S(0,y,VW,1,skyRow(y/(GY-1),night));
+  // 城市光污染雾
+  SA(0,GY-40,VW,40,'#ff3fa4',0.06*(1-night*0.35));
+  SA(0,GY-18,VW,18,'#3ee9ff',0.05*(1-night*0.3));
+  if(night>0.35){
+    var sn=(night-0.35)/0.65;
+    for(var i=0;i<50;i++){
+      var sx=((i*137+31)%VW), sy=((i*61+11)%(GY-56));
+      var tw=Math.sin(G.tick*1.6+i*2.1)*0.5+0.5;
+      SA(sx,sy,1,1,'#dceaff',(0.2+0.55*tw)*sn);
+      if(i%9===0) SA(sx-1,sy,3,1,'#9ec8ff',0.10*sn);
+    }
+  }
+  var moonX=48+((G.day*37)%(VW-100));
+  var sunX=40+((G.day*53)%(VW-80));
+  if(night<0.62){
+    var sa=clamp(1-night*1.6,0,1);
+    glowS(sunX,34,30,'#ff9a4a',0.5*sa);
+    // 雾里的太阳：上暗下亮的圆
+    var rr0=11;
+    for(var sy2=-rr0;sy2<=rr0;sy2++){
+      var hw=Math.round(Math.sqrt(Math.max(0,rr0*rr0-sy2*sy2)));
+      var tone=sy2<-4?'#ffcf7a':(sy2<2?'#ffb765':'#ff8f52');
+      SA(sunX-hw,34+sy2,hw*2,1,tone,sa*0.92);
+    }
+    SA(sunX-16,40,32,4,'#ff8f52',0.12*sa);
+  }
+  if(night>0.1){
+    var mn=clamp(night*1.25,0,1);
+    glowS(moonX,30,26,'#8fb8ff',0.28*mn);
+    var mr=7;
+    for(var my=-mr;my<=mr;my++){
+      var mw=Math.round(Math.sqrt(Math.max(0,mr*mr-my*my)));
+      SA(moonX-mw,30+my,mw*2,1,'#e6eeff',mn*0.95);
+    }
+    SA(moonX-3,27,3,2,'#b9cdf0',mn*0.55);
+    SA(moonX+1,31,2,2,'#b9cdf0',mn*0.45);
+    SA(moonX-1,33,2,1,'#b9cdf0',mn*0.4);
+  }
+  var t2=(G.tick*0.05)%1;
+  var fx=-24+t2*(VW+48);
+  SA(fx,20,6,1,'#3ee9ff',0.45*night);
+  glowS(fx+5,20,6,'#3ee9ff',0.4*night);
+}
+
+// ============================== 远景天际线 ==============================
+var skyline=[];
+var NEONS=['#ff3fa4','#3ee9ff','#9a6bff','#ffc857','#3dffa8'];
 function makeSkyline(){
   skyline=[];
-  var seed=1337;
-  function rnd(){ seed=(seed*1103515245+12345)&0x7fffffff; return (seed/0x7fffffff); }
-  for(var i=0;i<70;i++){
-    var w=8+Math.floor(rnd()*14);
-    var h=16+Math.floor(rnd()*42);
-    skyline.push({x:i*12-20, w:w, h:h, col: rnd()>0.5?'#10162a':'#0c1120', sign: rnd()>0.72?(rnd()>0.5?'#ff5a8a':'#5ad1ff'):null, sx:2+Math.floor(rnd()*6)});
+  var seed=77123;
+  function rnd(){ seed=(seed*1103515245+12345)&0x7fffffff; return seed/0x7fffffff; }
+  for(var i=0;i<54;i++){
+    var w=14+Math.floor(rnd()*18);
+    var h=34+Math.floor(rnd()*84);
+    var r=rnd();
+    skyline.push({
+      x:i*16-30, w:w, h:h,
+      tone: r<0.4?'#0b1020':(r<0.75?'#0d1426':'#090e1a'),
+      neon: rnd()>0.44?NEONS[Math.floor(rnd()*5)]:null,
+      neonH: 3+Math.floor(rnd()*10),
+      neonSide: rnd()>0.42,
+      ant: rnd()>0.62,
+      tank: rnd()>0.86,
+      sp: rnd()>0.78,
+      sd: Math.floor(rnd()*997)
+    });
   }
 }
 makeSkyline();
 
-function drawSkyline(par, baseY, scale, night){
-  var off=-(G.camX*par)%400;
-  // 远景雾（把天际线和天空融在一起）
-  for(var i=0;i<skyline.length;i++){
-    var b=skyline[i];
-    var x=b.x+off;
-    if(x<-40||x>VW+40) continue;
-    var hh=b.h*scale;
-    var base=b.col;
-    if(scale<0.9) base='#131a30';
-    ctx.fillStyle=base;
-    ctx.fillRect(Math.round(x),Math.round(baseY-hh),b.w,Math.round(hh));
-    if(b.sign && scale>0.9){
-      ctx.fillStyle=b.sign;
-      if(Math.sin(G.tick*0.08+i*3)>-0.4) ctx.fillRect(Math.round(x+b.sx),Math.round(baseY-hh+4),3,8);
-    }
-    for(var wy=0;wy<hh-6;wy+=6){
-      for(var wx=2;wx<b.w-3;wx+=5){
-        if(((wx+wy+i)%7)<2){
-          ctx.fillStyle='rgba(255,214,120,'+(0.1+0.3*night).toFixed(2)+')';
-          ctx.fillRect(Math.round(x+wx),Math.round(baseY-hh+wy+3),2,2);
+function drawSkyline(par,baseY,scale,night,dim){
+  var W=54*16;
+  var off=-(G.camX*par)%W;
+  if(off>0) off-=W;
+  for(var pass=0;pass<2;pass++){
+    var base=off+pass*W;
+    for(var i=0;i<skyline.length;i++){
+      var b=skyline[i];
+      var x=b.x+base;
+      if(x<-40||x>VW+40) continue;
+      var hh=Math.round(b.h*scale);
+      var top=Math.round(baseY-hh);
+      S(x,top,b.w,hh,dim?b.tone:'#0d1426');
+      S(x,top,b.w,1,rgba('#4d6288',dim?0.35:0.55));
+      SA(x+b.w-2,top,2,hh,'#000',0.25);
+      var lit=0.14+0.8*night;
+      for(var wy=4;wy<hh-4;wy+=5){
+        for(var wx=2;wx<b.w-2;wx+=4){
+          var s=(wx*7+wy*13+b.sd)%11;
+          if(s<3) SA(x+wx,top+wy,2,2,s===1?'#ffc857':'#8fd3ff',(0.08+0.24*lit)*(s===0?1.15:0.7));
         }
+      }
+      if(b.neon&&!dim){
+        var fl=Math.sin(G.tick*2.2+i*1.7)>-0.86?1:0.2;
+        if(b.neonSide){
+          SA(x+1,top+5,1,b.neonH,b.neon,0.75*fl);
+          glowS(x+1,top+5+b.neonH/2,9,b.neon,0.24*fl);
+        } else {
+          SA(x+2,top+2,b.w-4,1,b.neon,0.7*fl);
+          glowS(x+b.w/2,top+3,11,b.neon,0.2*fl);
+        }
+      }
+      if(b.tank){ S(x+2,top-4,5,4,'#101828'); S(x+3,top-5,3,1,'#1a2436'); }
+      if(b.sp){
+        S(x+b.w/2-1,top-7,3,7,'#0f1725');
+        if(Math.sin(G.tick*2+i)>0.4) SA(x+b.w/2-2,top-9,5,3,'#ff5a4a',0.25);
+      }
+      if(b.ant){
+        S(x+b.w-4,top-10,1,10,'#141d2e');
+        if(Math.sin(G.tick*3+i)>0.55) SA(x+b.w-4,top-11,1,1,'#ff5a4a',0.9);
       }
     }
   }
-  // 天际线底部的城市光雾
-  var gy=baseY-2;
-  var grd=ctx.createLinearGradient(0,gy-26,0,gy+8);
+  var grd=ctx.createLinearGradient(0,baseY-34,0,baseY+6);
   grd.addColorStop(0,'rgba(0,0,0,0)');
-  grd.addColorStop(1,'rgba(120,150,210,'+(0.16*(1-night*0.6)).toFixed(2)+')');
+  grd.addColorStop(1,rgba('#ff3fa4',0.11*(1-night*0.5)));
   ctx.fillStyle=grd;
-  ctx.fillRect(0,gy-26,VW,34);
+  ctx.fillRect(0,baseY-34,VW,40);
 }
 
-function drawGround(){
-  // 人行道
-  R(-600,GY,1200,VH-GY,'#0a0d16');
-  R(-600,GY,1200,11,'#242c40');
-  R(-600,GY,1200,1,'#3a4664');
-  // 地砖缝
-  for(var i=0;i<90;i++){
-    var bx=-560+i*13;
-    R(bx,GY+1,1,10,'#1c2333');
+function drawHoloAds(night){
+  var bx=(((210-G.camX*0.5)%620)+620)%620-140;
+  var by=30, wid=56, hgt=30;
+  if(!(night>0.15) || Math.sin(G.tick*9)<-0.93) return;
+  SA(bx,by,wid,hgt,'#3ee9ff',0.07);
+  S(bx,by,wid,1,rgba('#3ee9ff',0.9));
+  S(bx,by+hgt-1,wid,1,rgba('#3ee9ff',0.6));
+  S(bx,by,1,hgt,rgba('#3ee9ff',0.75));
+  S(bx+wid-1,by,1,hgt,rgba('#3ee9ff',0.75));
+  for(var i=0;i<hgt;i+=3) SA(bx+1,by+i,wid-2,1,'#3ee9ff',0.05);
+  // 内容：条形图 + 文字条
+  for(var g=0;g<7;g++){
+    var bh=2+((g*5)%12);
+    SA(bx+6+g*6,by+hgt-6-bh,4,bh,'#ff3fa4',0.55);
   }
-  R(-600,GY+11,1200,3,'#151a28');
+  SA(bx+6,by+5,wid-14,1,'#7bfff0',0.8);
+  SA(bx+6,by+8,wid-22,1,'#3ee9ff',0.5);
+  glowS(bx+wid/2,by+hgt/2,wid*0.5,'#3ee9ff',0.12);
+  var sy=by+((G.tick*20)%hgt);
+  SA(bx+1,sy,wid-2,2,'#7bfff0',0.13);
+}
+
+// ============================== 地面 ==============================
+function drawGround(){
+  R(-700,GY,1400,VH-GY,'#06080f');
+  // 人行道
+  R(-700,GY,1400,12,'#171e2e');
+  R(-700,GY,1400,1,'#3a4a68');
+  for(var i=0;i<110;i++){
+    var bx=-680+i*13;
+    R(bx,GY+1,1,10,'#111726');
+    if(i%2===0) A(bx+1,GY+3,12,1,'#1e2740',0.4);
+  }
+  // 积水（霓虹倒影的载体）
+  for(var p=0;p<9;p++){
+    var px2=-600+p*140+((p*37)%40);
+    A(px2,GY+6,26,4,'#0a1018',0.55);
+    A(px2+3,GY+7,18,2,'#12203a',0.5);
+  }
+  // 路缘
+  R(-700,GY+11,1400,1,'#2a3a55');
+  R(-700,GY+12,1400,1,'#0a0f18');
+  // 排水格栅
+  for(var g=0;g<10;g++){
+    var gx=-660+g*140;
+    R(gx,GY+6,14,5,'#080c14');
+    for(var s=0;s<4;s++) R(gx+1,GY+6+s,12,1,'#1a2334');
+  }
+  // 井盖
+  R(152,GY+5,11,6,'#131a26');
+  R(153,GY+6,9,4,'#0b1018');
   // 地下层
   var uy=GY+14;
-  R(-600,uy,1200,VH-uy,'#070a11');
-  R(-600,uy,1200,1,'#12192b');
-  // 主干电缆
-  for(var c=0;c<3;c++) R(-600,uy+4+c*4,1200,1,'#141c2e');
-  // 各建筑的电缆接入
-  for(var j=0;j<slots.length;j++){
-    var s=slots[j], st=s.st, col='#1b2438';
-    if(st && st.state==='ok') col = st.off?'#4a2438':'#1e5a7a';
-    R(s.x-14,uy-1,28,2,col);
-    R(s.x-1,uy,2,14,col);
-    R(s.x-3,uy+13,6,2,col);
+  // 土石层
+  R(-700,uy,1400,VH-uy,'#0a0a10');
+  R(-700,uy,1400,2,'#141320');
+  for(var r1=0;r1<64;r1++){
+    var rxp=-700+((r1*97)%1400), ryp=uy+4+((r1*53)%(VH-uy-6));
+    A(rxp,ryp,2,1,r1%3?'#15141f':'#1b1a26',0.9);
   }
-  // 家的电缆（粗）
-  R(-26,uy-1,52,3,'#2a7fa8');
-  R(-2,uy,4,16,'#2a7fa8');
-  R(-6,uy+15,12,2,'#2a7fa8');
-  // 五金店电缆
-  R(-66,uy-1,28,2,'#1e5a7a');
-  // 地基阴影
-  R(-600,GY-1,1200,1,'rgba(0,0,0,0.45)');
+  // 电缆束（横向）
+  R(-700,uy+6,1400,2,'#121a28');
+  R(-700,uy+6,1400,1,'#1c2942');
+  R(-700,uy+11,1400,3,'#0d1520');
+  R(-700,uy+11,1400,1,'#16202f');
+  R(-700,uy+17,1400,2,'#0b111a');
+  // 横向线缆束（带细高光）
+  R(-700,uy+22,1400,1,'#0f1622');
+  R(-700,uy+27,1400,1,'#0c121c');
+  for(var cb=0;cb<26;cb++){
+    var cbx=-690+cb*54;
+    A(cbx,uy+21,14,1,'#1a2437',0.8);
+    A(cbx+4,uy+26,9,1,'#18202f',0.7);
+  }
+  // 竖向支管 + 接头
+  for(var t=0;t<7;t++){
+    var tx=-600+t*200;
+    R(tx,uy+2,2,VH-uy-3,'#0b111b');
+    R(tx-1,uy+7,4,3,'#101827');
+  }
+  for(var jb=0;jb<5;jb++){
+    var jx=-480+jb*280;
+    R(jx,uy+13,9,6,'#101827');
+    R(jx+1,uy+14,7,4,'#070c14');
+    A(jx+2,uy+15,1,1,'#3ee9ff',0.4);
+    A(jx+5,uy+15,1,1,'#ffc857',0.3);
+  }
 }
 
+function drawUtilities(){
+  var uy=GY+14;
+  for(var j=0;j<slots.length;j++){
+    var s=slots[j], st=s.st;
+    if(!st) continue;
+    var col='#101826';
+    if(st.state==='ok') col = st.off?'#3a1c2c':'#123a4e';
+    R(s.x-8,uy-1,16,1,col);
+    R(s.x-1,uy,1,13,col);
+    R(s.x-2,uy+12,4,1,col);
+    if(st.state==='ok'&&!st.off){
+      A(s.x-1,uy+1,1,10,'#3ee9ff',0.14);
+      A(s.x-2,uy+12,4,1,'#3ee9ff',0.25);
+    }
+  }
+}
+
+var SHOP_ART={
+  conv: {neon:'#3ee9ff', neon2:'#7bfff0', glass:'#0b2130', w:40, h0:66, sign:'24H', label:'MART'},
+  tea:  {neon:'#ff3fa4', neon2:'#ff9cc8', glass:'#280e1c', w:40, h0:64, sign:'TEA', label:'BAR'},
+  food: {neon:'#ffc857', neon2:'#ffe9a8', glass:'#25140a', w:42, h0:66, sign:'EAT', label:'NOODLE'},
+  hotel:{neon:'#9a6bff', neon2:'#c9a8ff', glass:'#1d1430', w:44, h0:76, sign:'HOTEL', label:'ROOM'},
+  cyber:{neon:'#5ad1ff', neon2:'#b18cff', glass:'#141033', w:46, h0:70, sign:'NET', label:'CYBER CAFE'},
+  med:  {neon:'#3dffa8', neon2:'#a8ffe0', glass:'#0d2a26', w:38, h0:62, sign:'MED', label:'CLINIC'},
+  pawn: {neon:'#9a6bff', neon2:'#c9a8ff', glass:'#171029', w:38, h0:62, sign:'$', label:'PAWN'}
+};
+
+function drawReflections(night){
+  var a=0.10+0.24*night;
+  function one(x,w,col){
+    wetPool(x,w*0.95,col,a);
+    wetStreak(x,w*0.6,col,a*0.8);
+  }
+  one(-54,34,'#ffc857');
+  one(0,64,'#ffc857');
+  for(var i=0;i<slots.length;i++){
+    var st=slots[i].st;
+    if(!st||st.state!=='ok') continue;
+    if(isShop(st.kind)) one(st.x,36,SHOP_ART[st.kind].neon);
+    else if(st.kind==='turret') one(st.x,24,'#3ee9ff');
+    else if(st.kind==='barricade') one(st.x,26,'#ffc857');
+  }
+}
+
+// ============================== 街道道具 ==============================
+function drawProps(night){
+  // 电线杆 + 电线
+  var wires=[[-460,-380],[-300,-220],[-140,-60],[60,140],[220,300],[380,460]];
+  for(var i=0;i<wires.length;i++){
+    var x0=wires[i][0], x1=wires[i][1];
+    R(x0,GY-100,2,100,'#0e1420');
+    R(x0-3,GY-100,8,2,'#141c2b');
+    R(x0-4,GY-88,10,1,'#111827');
+    // 悬链
+    var sag=8, n=14;
+    for(var k=0;k<n;k++){
+      var t0=k/n, t1=(k+1)/n;
+      var ax=x0+(x1-x0)*t0, ay=GY-98+Math.sin(t0*Math.PI)*sag;
+      var bx2=x0+(x1-x0)*t1, by2=GY-98+Math.sin(t1*Math.PI)*sag;
+      A(Math.min(ax,bx2),Math.min(ay,by2),Math.max(1,Math.abs(bx2-ax)),1,'#0c121d',0.9);
+    }
+    // 斜拉线
+    A(x0+1,GY-96,1,6,'#0c121d',0.8);
+  }
+  // 街灯
+  var lamps=[-200,200,420];
+  for(var l=0;l<lamps.length;l++){
+    var lx=lamps[l];
+    R(lx,GY-46,2,46,'#111827');
+    R(lx-4,GY-48,10,2,'#18202f');
+    var on = night>0.2;
+    R(lx-6,GY-50,6,3,on?'#ffd88a':'#2a3448');
+    if(on){
+      glow(lx-3,GY-48,26,'#ffc857',0.16);
+      // 光锥
+      ctx.globalCompositeOperation='lighter';
+      var g2=ctx.createLinearGradient(0,GY-48,0,GY);
+      g2.addColorStop(0,'rgba(255,200,90,0.16)');
+      g2.addColorStop(1,'rgba(255,200,90,0)');
+      ctx.fillStyle=g2;
+      ctx.beginPath();
+      ctx.moveTo(lx-6+ox,GY-48);
+      ctx.lineTo(lx+ox,GY-48);
+      ctx.lineTo(lx+22+ox,GY);
+      ctx.lineTo(lx-26+ox,GY);
+      ctx.closePath();
+      ctx.fill();
+      ctx.globalCompositeOperation='source-over';
+    }
+  }
+  // 自动售货机
+  R(108,GY-30,14,30,'#16202f');
+  R(108,GY-30,14,1,'#2a3a55');
+  R(110,GY-28,10,16,'#0a1220');
+  R(111,GY-27,8,14,'#1a3a4d');
+  for(var v=0;v<3;v++) R(112,GY-26+v*4,6,2,rgba('#3ee9ff',0.55));
+  if(night>0.2){
+    A(110,GY-28,10,16,'#3ee9ff',0.22);
+    glow(115,GY-20,16,'#3ee9ff',0.12);
+  }
+  R(110,GY-9,10,5,'#0a0f18');
+  R(111,GY-8,3,3,'#ffc857');
+  // 垃圾桶
+  R(-150,GY-14,11,14,'#1a2333');
+  R(-150,GY-14,11,1,'#2f3d55');
+  R(-149,GY-10,9,1,'#0e1622');
+  R(-149,GY-6,9,1,'#0e1622');
+  // 蒸汽
+  var st2=(G.tick*0.4)%1;
+  for(var s2=0;s2<4;s2++){
+    var sy3=GY-6-((st2+s2*0.25)%1)*22;
+    var sx3=150+Math.sin(G.tick*0.8+s2)*3;
+    A(sx3,sy3,2,6,'#8fb0cc',0.10*(1-((st2+s2*0.25)%1)));
+  }
+}
+
+// ============================== 家 ==============================
 function drawHome(){
   var x=0, y=GY, lv=G.homeLevel;
-  var w=68, h=54+(lv>3?6:0);
-  var lit = G.phase==='night';
-  // 主体
-  R(x-w/2,y-h,w,h,'#242e46');
-  R(x-w/2,y-h,w,3,'#3c4c70');
-  // 二层
-  R(x-w/2+4,y-h-9,w-8,10,'#1e2740');
-  R(x-w/2+4,y-h-9,w-8,2,'#3c4c70');
-  // 屋顶招牌（暖光）
-  R(x-w/2-4,y-h-16,w+8,7,'#3a2a1a');
-  R(x-w/2-3,y-h-15,w+6,5, lit?'#ffcf6b':'#c98f3a');
-  R(x-w/2+2,y-h-14,6,3,'#0d1420');
-  R(x-w/2+12,y-h-14,20,3,'#0d1420');
-  R(x-w/2+36,y-h-14,10,3,'#0d1420');
-  // 一楼店面
-  R(x-w/2,y-24,w,24,'#141c2e');
-  R(x-w/2,y-24,w,1,'#3c4c70');
+  var w=78, h=84+(lv>3?8:0)+(lv>5?8:0);
+  var top=y-h;
+  var night=(G.phase==='night');
+  var warm=night?'#ffcf6b':'#8fd3ff';
+  R(x-w/2,top,w,h,P.wall1);
+  R(x-w/2,top,w,2,P.wall3);
+  A(x-w/2,top,3,h,P.wall2,0.85);
+  A(x+w/2-3,top,3,h,'#0a1120',0.9);
+  // 楼层线
+  for(var f=1;f<4;f++) R(x-w/2,top+f*20,w,1,'#0c1420');
+  // 二/三层窗
+  for(var r0=0;r0<2;r0++){
+    for(var i2=0;i2<3;i2++){
+      var wx=x-w/2+8+i2*22, wy=top+10+r0*20;
+      R(wx-1,wy-1,14,13,'#070d18');
+      R(wx,wy,12,11,night?'#2a1c0c':'#12293e');
+      R(wx+1,wy+1,10,9,warm);
+      A(wx+1,wy+1,10,3,'#ffffff',0.12);
+      A(wx+5,wy+1,1,9,'#0a1120',0.6);
+      R(wx+1,wy+7,10,1,'#0a1120');
+      if(night&&((i2+r0)%2===0)) R(wx+2,wy+5,3,4,'#141a26');
+    }
+  }
+  // 屋顶设备
+  R(x-w/2+5,top-8,14,8,P.wall2);
+  R(x-w/2+6,top-9,12,1,P.wall4);
+  R(x+w/2-18,top-14,2,14,'#1a2334');
+  if(Math.sin(G.tick*2.6)>0.5){ A(x+w/2-19,top-15,4,2,'#ff5a4a',0.9); glow(x+w/2-17,top-14,8,'#ff5a4a',0.2); }
+  // 卫星锅
+  R(x+w/2-28,top-9,8,1,'#28344c');
+  R(x+w/2-24,top-13,7,7,'#161e2e');
+  R(x+w/2-23,top-12,5,5,'#2a3a55');
+  // 屋顶霓虹
+  R(x-w/2,top-1,w,1,'#ffc857');
+  glow(x,top,w*0.5,'#ffc857',0.06+0.08*night);
+  // 竖招
+  var sy=top+18;
+  R(x-w/2-9,sy,8,44,'#080c14');
+  R(x-w/2-8,sy+1,6,42,'#101724');
+  text3(x-w/2-7,sy+4,'Z',  '#ff3fa4');
+  text3(x-w/2-7,sy+12,'E',  '#ff3fa4');
+  text3(x-w/2-7,sy+20,'R',  '#ff3fa4');
+  text3(x-w/2-7,sy+28,'O',  '#ff3fa4');
+  glow(x-w/2-5,sy+24,18,'#ff3fa4',0.14+0.10*night);
+  // 主招牌
+  R(x-w/2+4,top+5,w-18,14,'#0b0f18');
+  R(x-w/2+4,top+5,w-18,1,rgba('#ffc857',0.85));
+  R(x-w/2+4,top+17,w-18,1,rgba('#ffc857',0.4));
+  text3(x-w/2+9,top+7,'NEON', '#ffe9a8');
+  text3(x-w/2+9,top+13,'HOTEL', '#c9975a');
+  glow(x-4,top+9,w*0.36,'#ffc857',0.10+0.08*night);
+  // 店面
+  R(x-w/2,GY-32,w,32,'#0b111c');
+  R(x-w/2,GY-32,w,1,'#28344c');
   // 玻璃门
-  R(x-9,y-23,18,23,'#0b1120');
-  R(x-8,y-22,16,14, lit?'#e8b45a':'#5f9fd0');
-  R(x-8,y-22,16,1,'#dce8f5');
-  R(x-8,y-22,1,14,'#dce8f5');
-  R(x+7,y-22,1,14,'#dce8f5');
-  R(x-8,y-9,16,2,'#3c4c70');
-  R(x+6,y-16,2,2,'#ffd86b');
+  R(x-13,GY-30,26,30,'#05090f');
+  R(x-12,GY-29,24,24,night?'#2a1c0c':'#0f2a44');
+  A(x-12,GY-29,24,24,warm,0.75);
+  A(x-12,GY-29,24,6,'#ffffff',0.09);
+  R(x-12,GY-29,1,24,'#0a1120');
+  R(x+11,GY-29,1,24,'#0a1120');
+  R(x-1,GY-29,1,24,'#0a1120');
+  R(x-10,GY-27,3,3,'#0d1420');
+  R(x+2,GY-20,2,12,'#0a1120');
+  A(x-14,GY-3,28,3,warm,0.16);
   // 侧窗
-  R(x-w/2+4,y-20,7,8,'#0b1120');
-  R(x-w/2+5,y-19,5,6, lit?'#ffcf6b':'#7cc7ff');
-  R(x+w/2-11,y-20,7,8,'#0b1120');
-  R(x+w/2-10,y-19,5,6, lit?'#ffcf6b':'#7cc7ff');
-  // 窗（随等级增加）
-  for(var i=0;i<Math.min(lv,4);i++){
-    R(x-w/2+6+i*15,y-h+3,9,8,'#0d1420');
-    R(x-w/2+7+i*15,y-h+4,7,6, lit?'#ffcf6b':'#7cc7ff');
+  for(var sw2=0;sw2<2;sw2++){
+    var sx4=x-w/2+5+sw2*60;
+    R(sx4,GY-28,10,12,'#05090f');
+    R(sx4+1,GY-27,8,10,warm);
+    A(sx4+1,GY-27,8,3,'#ffffff',0.10);
   }
   // 金库
-  R(x+w/2-11,y-13,9,10,'#4a5c84');
-  R(x+w/2-9,y-11,5,5,'#ffd86b');
-  // 血条（只在受损时显示）
+  R(x+w/2-13,GY-14,12,13,'#35435f');
+  R(x+w/2-12,GY-13,10,1,'#55688e');
+  R(x+w/2-8,GY-9,4,5,'#ffd86b');
+  glow(x+w/2-6,GY-7,8,'#ffd86b',0.10+0.08*night);
+  // 雨棚
+  R(x-w/2-3,GY-33,w+6,2,'#1a2334');
+  R(x-w/2-2,GY-33,w+4,1,'#38496a');
   if(G.homeHP<G.homeMax){
-    var bw=w, bx=x-w/2, by=y-h-19;
+    var bw=w-6, bx=x-bw/2, by=top-20;
+    R(bx-1,by-1,bw+2,5,'#080c14');
     R(bx,by,bw,3,'#2a1016');
-    R(bx,by,Math.max(0,bw*(G.homeHP/G.homeMax)),3,'#4fd88a');
+    R(bx,by,bw*clamp(G.homeHP/G.homeMax,0,1),3,'#4fd88a');
+    A(bx,by,bw*clamp(G.homeHP/G.homeMax,0,1),1,'#a8ffd0',0.5);
   }
-  // 等级点
-  for(var k=0;k<lv;k++) R(x-15+k*4,y-h-11,2,2,'#8fd3ff');
+  for(var k=0;k<lv;k++){
+    R(x-15+k*4,top-16,2,2,'#8fd3ff');
+    glow(x-14+k*4,top-15,5,'#8fd3ff',0.10);
+  }
 }
 
 function drawHardware(){
-  var x=-52,y=GY,w=40,h=42;
-  R(x-w/2,y-h,w,h,'#2a3040');
-  R(x-w/2,y-h,w,3,'#454e66');
+  var x=-54,y=GY,w=46,h=62;
+  var top=y-h;
+  R(x-w/2,top,w,h,'#171e2c');
+  R(x-w/2,top,w,2,'#27334c');
+  A(x-w/2,top,2,h,'#202a3d',0.8);
+  A(x+w/2-2,top,2,h,'#0a1018',0.85);
   // 卷帘门
-  for(var i=0;i<11;i++) R(x-w/2+3,y-h+7+i*3,w-6,2,i%2?'#232a3c':'#1b2130');
+  R(x-w/2+3,top+20,w-6,40,'#080d16');
+  for(var i=0;i<13;i++) R(x-w/2+3,top+21+i*3,w-6,2,i%2?'#1e2739':'#161e2c');
+  R(x-w/2+3,top+20,w-6,1,'#2b3a55');
   // 招牌
-  R(x-w/2+2,y-h-7,w-4,7,'#4a3a22');
-  R(x-w/2+4,y-h-6,w-8,5,'#c79b58');
-  R(x-w/2+7,y-h-5,3,3,'#2b2116');
-  R(x-w/2+12,y-h-5,3,3,'#2b2116');
-  R(x-w/2+17,y-h-5,3,3,'#2b2116');
-  // 工具箱
-  R(x+10,y-h+9,7,5,'#8a6a3a');
-  R(x+11,y-h+10,5,3,'#c79b58');
-  // 靠墙的钢管
-  for(var k=0;k<3;k++) R(x-w/2+5+k*3,y-h+30,2,12,'#7a8290');
+  R(x-w/2,top+3,w,13,'#0b0f16');
+  R(x-w/2+1,top+4,w-2,1,rgba('#ffc857',0.85));
+  R(x-w/2+1,top+14,w-2,1,rgba('#ffc857',0.45));
+  text3(x-w/2+7,top+6,'WU JIN', '#ffd86b');
+  text3(x-w/2+7,top+12,'PARTS', '#c9975a');
+  glow(x,top+8,w*0.4,'#ffc857',0.12);
+  // 侧边管道
+  for(var k=0;k<2;k++) R(x+w/2-7+k*3,top+18,2,42,'#28344c');
+  // 梯子
+  for(var l2=0;l2<7;l2++) R(x-w/2+5,top+24+l2*5,7,1,'#38496a');
+  R(x-w/2+5,top+24,1,30,'#38496a');
+  R(x-w/2+11,top+24,1,30,'#38496a');
+  // 箱子/工具
+  R(x-w/2+2,GY-10,10,10,'#33261a');
+  R(x-w/2+3,GY-9,8,1,'#6d5233');
+  R(x+w/2-14,GY-8,9,8,'#1b2739');
+  R(x+w/2-13,GY-7,7,1,'#33465e');
+  for(var p2=0;p2<3;p2++) R(x-w/2+14+p2*3,GY-26,2,12,'#37465c');
+  // 门灯
+  R(x+w/2-10,top+20,4,2,'#ffd86b');
+  glow(x+w/2-8,top+21,8,'#ffc857',0.18);
 }
 
+// ============================== 建筑 ==============================
 function hpBar(st,x,y,w){
   if(st.hp>=st.maxHp) return;
+  R(x-w/2-1,y-1,w+2,4,'#080c14');
   R(x-w/2,y,w,2,'#2a1016');
   R(x-w/2,y,w*clamp(st.hp/st.maxHp,0,1),2,'#ff8f5a');
 }
 
-function drawStructure(st){
+function drawShop(st){
+  var art=SHOP_ART[st.kind];
+  var x=st.x, w=art.w;
+  var h=art.h0+(st.level-1)*7;
+  var top=GY-h;
+  var neon=art.neon, neon2=art.neon2;
+  var night=(G.phase==='night');
+  var flick=Math.sin(G.tick*6.5+st.x*0.7)>-0.9?1:0.35;
+  var off=!!st.off;
+  var nc=off?'#39404f':neon;
+  // 墙体
+  R(x-w/2,top,w,h,P.wall1);
+  R(x-w/2,top,w,2,P.wall3);
+  A(x-w/2,top,2,h,'#1a2438',0.95);
+  A(x+w/2-2,top,2,h,'#070c14',0.9);
+  // 楼层线
+  R(x-w/2,top+24,w,1,'#0b1220');
+  R(x-w/2,top+52,w,1,'#0b1220');
+  // 二层窗（竖长窗，带窗框）
+  if(h>=62){
+    for(var i2=0;i2<2;i2++){
+      var wx=x-w/2+5+i2*17;
+      R(wx-1,top+28,12,16,'#060b14');
+      R(wx,top+29,10,14,night?'#2a1c0c':'#10283c');
+      R(wx+1,top+30,8,12,night?'#ffcf6b':'#5f9fd0');
+      A(wx+1,top+30,8,4,'#ffffff',0.10);
+      A(wx+4,top+30,1,12,'#081018',0.7);
+      R(wx+1,top+37,8,1,'#081018');
+      if(night) R(wx+2,top+35,2,5,'#101724');
+    }
+  }
+  // 招牌底板
+  R(x-w/2+1,top+5,w-2,14,'#070b12');
+  R(x-w/2+1,top+5,w-2,1,rgba(nc,0.9));
+  R(x-w/2+1,top+17,w-2,1,rgba(nc,0.45));
+  // 招牌文字
+  var t1=art.sign, t2=art.label;
+  var w1=text3W(t1), w2=text3W(t2);
+  text3(x-w1/2,top+7,t1, off?'#2c3342':neon2);
+  if(w2<w-10) text3(x-w2/2,top+13,t2, off?'#232937':rgba(nc,0.9));
+  if(!off) glow(x,top+11,w*0.5,nc,0.12*flick+0.05);
+  // 雨棚
+  var awnC=st.kind==='conv'?'#123241':(st.kind==='tea'?'#35102b':(st.kind==='food'?'#35220e':'#20183a'));
+  R(x-w/2-1,top+19,w+2,5,awnC);
+  for(var s2=0;s2<Math.floor(w/7);s2++) R(x-w/2+s2*7,top+19,4,5,off?'#262c38':rgba(nc,0.45));
+  R(x-w/2-1,top+24,w+2,1,'#080d16');
+  // 店面
+  var gy0=top+25, gh=GY-gy0-3;
+  R(x-w/2+2,gy0,w-4,gh,'#05090f');
+  R(x-w/2+3,gy0+1,w-6,gh-2,off?'#0c1220':art.glass);
+  if(!off){
+    A(x-w/2+3,gy0+1,w-6,gh-2,neon2,0.16);
+    A(x-w/2+3,gy0+1,w-6,4,'#ffffff',0.08);
+    // 室内货架
+    for(var r2=0;r2<3;r2++){
+      R(x-w/2+5,gy0+6+r2*7,w-13,1,rgba(neon2,0.35));
+      for(var it=0;it<5;it++) R(x-w/2+6+it*5,gy0+4+r2*7,2,2,rgba(neon2,0.4));
+    }
+    // 收银台人影
+    R(x+w/2-12,gy0+5,4,gh-7,'#05090f');
+    R(x+w/2-11,gy0+3,2,2,'#05090f');
+  }
+  A(x-w/2+4,gy0+2,2,gh-4,'#ffffff',0.06);
+  A(x+w/2-6,gy0+2,1,gh-4,'#ffffff',0.04);
+  // 门
+  var dx = st.kind==='pawn'? x-6 : x+5;
+  R(dx-5,GY-24,11,24,'#060b14');
+  R(dx-4,GY-23,9,21,off?'#0c1220':rgba(neon2,0.24));
+  A(dx-4,GY-23,9,3,'#ffffff',0.09);
+  R(dx-4,GY-13,9,1,'#0a1120');
+  R(dx+2,GY-12,2,2,'#c9b06a');
+  if(!off) A(dx-5,GY-2,11,2,neon2,0.14);
+  // ---- 各店专属细节 ----
+  if(st.kind==='pawn'){
+    for(var b2=0;b2<4;b2++) R(x-w/2+6+b2*4,gy0+6,1,gh-8,'#080d16');
+    R(x+8,top+30,8,8,'#080d16');
+    R(x+9,top+31,2,2,rgba(neon,0.85));
+    R(x+13,top+31,2,2,rgba(neon,0.85));
+    R(x+11,top+34,2,2,rgba(neon,0.85));
+    // 挂着的锁与首饰
+    R(x-w/2+4,gy0+6,3,5,'#2a2038');
+    R(x-w/2+5,gy0+7,1,1,'#c9a24a');
+    R(x-w/2+4,gy0+13,4,4,'#201a30');
+  } else if(st.kind==='hotel'){
+    // 三层客房窗（暖光）
+    for(var hf=0;hf<3;hf++){
+      var wx2=x-w/2+6+hf*13;
+      R(wx2-1,top+28,11,13,'#060b14');
+      R(wx2,top+29,9,11,night?'#3a2410':'#10283c');
+      R(wx2+1,top+30,7,9,night?'#ffcf6b':'#5f9fd0');
+      A(wx2+1,top+30,7,3,'#ffffff',0.10);
+      if(night){ R(wx2+2,top+34,3,5,'#141a26'); }
+    }
+    // 竖排 HOTEL 灯箱
+    R(x+w/2-9,top+28,7,26,'#0a0e18');
+    R(x+w/2-8,top+29,5,24,'#1a1230');
+    text3(x+w/2-7,top+31,'H',' #c9a8ff'.trim());
+    text3(x+w/2-7,top+38,'O',' #c9a8ff'.trim());
+    text3(x+w/2-7,top+45,'T',' #c9a8ff'.trim());
+    glow(x+w/2-5,top+40,14,neon,0.12);
+    // 门口行李架
+    R(x-14,GY-7,9,2,'#2a2038');
+    R(x-13,GY-10,3,3,'#3a3050');
+    R(x-9,GY-9,4,2,'#3a3050');
+  } else if(st.kind==='cyber'){
+    // 大屏（LED 阵列）
+    R(x-w/2+3,top+26,w-6,14,'#06060f');
+    for(var lx=0;lx<9;lx++){
+      for(var ly=0;ly<3;ly++){
+        var lit2=((lx*7+ly*5+Math.floor(G.tick*6))%5)<2;
+        if(lit2) A(x-w/2+5+lx*4,top+28+ly*4,3,3,ly===1?neon2:neon,0.55);
+      }
+    }
+    glow(x,top+33,w*0.5,neon,0.14*(0.6+0.4*night));
+    // 门口机箱
+    R(x-16,GY-8,6,8,'#1a2038');
+    R(x-15,GY-7,4,1,'#3dffa8');
+    // 椅子剪影
+    R(x+6,GY-14,3,6,'#0d1020');
+    R(x+10,GY-12,3,4,'#0d1020');
+  } else if(st.kind==='med'){
+    // 发光绿十字
+    var cxr=x+w/2-11, cyr=top+29;
+    R(cxr-1,cyr-1,9,9,'#06120e');
+    R(cxr+1,cyr,4,7,'#3dffa8');
+    R(cxr,cyr+2,6,3,'#3dffa8');
+    glow(cxr+2,cyr+3,14,'#3dffa8',0.18+0.10*night);
+    // 药架
+    for(var mr=0;mr<3;mr++){
+      R(x-w/2+5,gy0+4+mr*6,w-20,1,'#1e3a34');
+      for(var mb=0;mb<3;mb++) R(x-w/2+6+mb*5,gy0+2+mr*6,3,2,mr%2?'#a8ffe0':'#ffffff');
+    }
+    // 门口担架
+    R(x+8,GY-6,10,2,'#c9d6d0');
+    R(x+9,GY-4,2,3,'#5a6a72');
+    R(x+15,GY-4,2,3,'#5a6a72');
+  } else if(st.kind==='food'){
+    // 两盏红灯笼
+    for(var ln=0;ln<2;ln++){
+      var lx2=x-w/2+7+ln*8;
+      R(lx2,top+19,4,6,'#3a1010');
+      R(lx2+1,top+20,2,4,'#ff5a4a');
+      glow(lx2+2,top+22,10,'#ff5a4a',0.16+0.10*night);
+      R(lx2+1,top+26,2,2,'#c99b58');
+    }
+    // 菜单条
+    for(var ms=0;ms<3;ms++) R(x+w/2-13+ms*4,gy0+3,2,7,'#d8c8a0');
+  } else if(st.kind==='tea'){
+    // 菜单板
+    R(x-w/2+4,top+26,13,10,'#0a0e18');
+    R(x-w/2+5,top+27,11,8,'#241a2c');
+    for(var mt=0;mt<3;mt++) R(x-w/2+6,top+28+mt*2,7,1,rgba(neon2,0.6));
+    // 杯架
+    R(x+7,GY-11,7,2,'#2a1a26');
+    for(var cp=0;cp<3;cp++) R(x+8+cp*2,GY-13,1,2,rgba(neon2,0.7));
+  } else if(st.kind==='conv'){
+    // 促销贴纸
+    R(x-15,gy0+3,5,4,rgba(neon,0.35));
+    R(x-15,gy0+8,5,2,rgba(neon,0.25));
+    R(x+8,gy0+3,4,6,rgba('#ff3fa4',0.25));
+  }
+  // 店员（站在玻璃后）
+  if(isShop(st.kind)&&st.staff>0&&st.state==='ok'&&!off&&st.kind!=='pawn'&&st.kind!=='med'){
+    var sx6=x-w/2+8, sy6=GY-3;
+    R(sx6-3,sy6-12,6,9,'#1a2438');
+    R(sx6-2,sy6-14,4,4,'#e8bd97');
+    R(sx6-2,sy6-16,4,2,'#141a2b');
+    R(sx6-3,sy6-8,6,1,rgba(neon2,0.5));
+    A(sx6-2,sy6-14,4,4,'#000',0.35);
+  }
+  // 空调外机
+  R(x+w/2-10,top+30,7,6,'#1e2739');
+  R(x+w/2-9,top+31,5,1,'#33465e');
+  R(x+w/2-9,top+33,5,1,'#33465e');
+  R(x+w/2-9,top+35,5,1,'#33465e');
+  // 屋顶广告灯箱
+  if(st.level>=2){
+    R(x-w/2+4,top-8,w-8,7,'#080c14');
+    R(x-w/2+4,top-8,w-8,1,rgba(neon,0.7));
+    text3(x-w/2+7,top-6,st.level>=3?'OPEN':'NEW', off?'#2c3342':neon);
+    if(!off) glow(x,top-5,w*0.3,neon,0.10);
+  }
+  // 缺货
+  if(st.stock<=0&&st.restockT<=0&&st.kind!=='pawn'){
+    var bob=Math.round(Math.sin(G.tick*4)*1);
+    R(x-8,top-12+bob,16,10,'#140810');
+    R(x-7,top-11+bob,14,8,'#ff5a4a');
+    text3(x-5,top-9+bob,'SOLD', '#2a0a10');
+    glow(x,top-6+bob,12,'#ff5a4a',0.2);
+  }
+  // 补货进度
+  if(st.restockT>0){
+    var rw=w-8, rp=1-st.restockT/SHOPS[st.kind].restock;
+    R(x-rw/2-1,GY-3,rw+2,4,'#080c14');
+    R(x-rw/2,GY-2,rw,2,'#18202f');
+    R(x-rw/2,GY-2,rw*clamp(rp,0,1),2,'#7ff0c4');
+    A(x-rw/2,GY-2,rw*clamp(rp,0,1),1,'#c8ffe8',0.6);
+  }
+  // 断电
+  if(off){
+    R(x+11,top+26,7,7,'#140810');
+    R(x+12,top+27,5,5,'#ff6b6b');
+    glow(x+14,top+29,9,'#ff6b6b',0.2);
+  }
+  hpBar(st,x,top-4,w-6);
+}
+
+function drawDef(st){
   var x=st.x,y=GY;
-  if(st.state==='ruin'){
-    R(x-16,y-14,32,14,'#1a1420');
-    R(x-12,y-18,6,5,'#241a2c');
-    R(x+2,y-16,8,4,'#241a2c');
-    R(x-4,y-22,2,4,'#3a2a3a');
-    return;
-  }
-  if(st.state==='building'){
-    R(x-16,y-2,32,2,'#3a4a6e');
-    for(var i=0;i<4;i++) R(x-14+i*9,y-24,2,24,'#2c3a55');
-    R(x-14,y-24,28,2,'#2c3a55');
-    var p=1-st.buildT/(isShop(st.kind)?25:10);
-    R(x-14,y-28,28,3,'#1a2233');
-    R(x-14,y-28,28*clamp(p,0,1),3,'#8fd3ff');
-    return;
-  }
-  if(isShop(st.kind)){
-    var c=SHOPS[st.kind];
-    var h=40+(st.level-1)*6, w=36;
-    R(x-w/2,y-h,w,h,c.c3);
-    R(x-w/2,y-h,w,3,c.c1);
-    for(var k=0;k<5;k++) R(x-w/2+k*7,y-h+4,7,5,k%2?c.c2:c.c1);
-    R(x-w/2+3,y-h-6,w-6,6,c.c1);
-    R(x-w/2+5,y-h-5,6,4,c.c2);
-    R(x-w/2+14,y-h-5,8,4,'#0d1420');
-    R(x-6,y-14,12,14,'#0d1420');
-    R(x-5,y-13,10,6,G.phase==='night'?'#ffcf6b':'#7cc7ff');
-    if(st.stock<=0&&st.restockT<=0&&st.kind!=='pawn'){
-      var bob=Math.sin(G.tick*0.15)*1.5;
-      R(x-3,y-h-12+bob,6,5,'#ff6b6b');
-      R(x-1,y-h-7+bob,2,2,'#ff6b6b');
+  var night=(G.phase==='night');
+  if(st.kind==='barricade'){
+    shadowAt(x,34,0.35);
+    for(var i=0;i<2;i++){
+      var bx=x-17+i*18;
+      R(bx,y-18,15,18,'#2f394b');
+      R(bx,y-18,15,1,'#485a72');
+      R(bx,y-18,1,18,'#41506a');
+      R(bx,y-7,15,1,'#212938');
+      for(var s=0;s<4;s++) R(bx+1+s*4,y-15,2,5,i%2?'#ffc857':'#161b26');
+      R(bx+2,y-18,2,3,'#5b6a86');
     }
-    if(st.restockT>0){
-      R(x-14,y-h-10,28,3,'#1a2233');
-      R(x-14,y-h-10,28*(1-st.restockT/c.restock),3,'#7ff0c4');
-    }
-    if(st.off) R(x+10,y-h-2,5,5,'#ff6b6b');
-  } else if(st.kind==='barricade'){
-    R(x-18,y-4,36,4,'#5a4a30');
-    for(var b=0;b<3;b++) R(x-16+b*13,y-16,3,16,'#8a6a3a');
-    R(x-17,y-14,34,3,'#c79b58');
-    R(x-17,y-8,34,3,'#c79b58');
-    hpBar(st,x,y-20,36);
+    R(x-18,y-20,36,2,'#28344c');
+    R(x-18,y-20,36,1,'#5b6a86');
+    var on=Math.sin(G.tick*4)>0;
+    R(x-2,y-23,4,3,on?'#ff5a4a':'#38141a');
+    if(on) glow(x,y-22,10,'#ff5a4a',0.26);
+    hpBar(st,x,y-26,36);
   } else if(st.kind==='spike'){
+    shadowAt(x,34,0.3);
+    R(x-17,y-3,34,3,'#1e2739');
+    R(x-17,y-3,34,1,'#38496a');
     for(var s2=0;s2<5;s2++){
-      R(x-16+s2*8,y-5,2,5,'#7a8290');
-      R(x-15+s2*8,y-7,1,2,'#c3ccda');
+      var sx=x-15+s2*7;
+      R(sx+1,y-10,2,7,'#8fa0b8');
+      R(sx,y-6,4,3,'#6b7a92');
+      R(sx+1,y-10,1,3,'#c8d2df');
+      if(Math.sin(G.tick*2+s2)>0.8) A(sx+1,y-11,1,1,'#ffffff',0.8);
     }
-    R(x-17,y-2,34,2,'#4a5464');
-    hpBar(st,x,y-12,36);
+    hpBar(st,x,y-15,34);
+  } else if(st.kind==='camera'){
+    shadowAt(x,16,0.3);
+    // 立杆
+    R(x-1,y-38,2,38,'#28344c');
+    R(x-1,y-38,1,38,'#3d5474');
+    R(x-6,y-40,12,2,'#33415c');
+    // 云台 + 支臂
+    var sw3=Math.sin(G.tick*0.7+x)*3;
+    R(x-1,y-44,2,4,'#44587a');
+    R(x-10+sw3,y-46,9,3,'#38496a');
+    R(x-10+sw3,y-46,9,1,'#6b86ab');
+    // 机身
+    R(x-11+sw3,y-44,11,7,'#4b5f80');
+    R(x-11+sw3,y-44,11,1,'#7089ad');
+    R(x-11+sw3,y-38,11,1,'#26324a');
+    // 镜头
+    R(x-9+sw3,y-42,4,4,'#080d16');
+    R(x-8+sw3,y-41,2,2,'#ff5a4a');
+    R(x-2+sw3,y-42,1,1,'#3dffa8');
+    if(night){
+      glow(x-2+sw3,y-42,9,'#ff5a4a',0.22);
+      // 扫描光锥
+      ctx.globalCompositeOperation='lighter';
+      var g2=ctx.createLinearGradient(0,y-42,0,y-14);
+      g2.addColorStop(0,'rgba(255,90,90,0.13)');
+      g2.addColorStop(1,'rgba(255,90,90,0)');
+      ctx.fillStyle=g2;
+      ctx.beginPath();
+      ctx.moveTo(x-4+sw3+ox,y-42);
+      ctx.lineTo(x-1+sw3+ox,y-42);
+      ctx.lineTo(x+16+sw3+ox,y-12);
+      ctx.lineTo(x-20+sw3+ox,y-12);
+      ctx.closePath(); ctx.fill();
+      ctx.globalCompositeOperation='source-over';
+    }
+    if(st.off){ R(x+3,y-34,6,5,'#140810'); R(x+4,y-33,4,3,'#ff6b6b'); }
+    hpBar(st,x,y-50,24);
+  } else if(st.kind==='zapdoor'){
+    shadowAt(x,30,0.35);
+    // 双柱
+    for(var p3=0;p3<2;p3++){
+      var px6=x-16+p3*26;
+      R(px6,y-34,6,34,'#2a3550');
+      R(px6,y-34,6,1,'#44587a');
+      R(px6,y-34,1,34,'#3d5474');
+      R(px6,y-30,6,1,'#ffc857');
+      R(px6,y-22,6,1,'#ffc857');
+      R(px6-1,y-36,8,2,'#38496a');
+    }
+    // 电弧
+    if(!st.off){
+      var arc=Math.sin(G.tick*22+st.x)>-0.2;
+      if(arc){
+        ctx.strokeStyle='#7bfff0';
+        ctx.lineWidth=1;
+        ctx.beginPath();
+        for(var ax=0;ax<7;ax++){
+          var px7=x-10+ax*3.4;
+          var py7=y-30+Math.sin(G.tick*30+ax*2)*4+(ax%2?2:-2);
+          if(ax===0) ctx.moveTo(px7+ox,py7); else ctx.lineTo(px7+ox,py7);
+        }
+        ctx.stroke();
+        glow(x,y-28,18,'#7bfff0',0.22);
+      }
+      A(x-10,y-32,20,3,'#7bfff0',0.12);
+      A(x-10,y-24,20,3,'#7bfff0',0.12);
+    }
+    if(st.off){ R(x-3,y-20,7,6,'#140810'); R(x-2,y-19,5,4,'#ff6b6b'); }
+    hpBar(st,x,y-38,32);
   } else if(st.kind==='turret'){
-    R(x-12,y-10,24,10,'#2c3a55');
-    R(x-8,y-20,16,12,'#3a4a6e');
-    R(x-6,y-18,12,4,'#9fb3d1');
+    shadowAt(x,26,0.4);
+    R(x-11,y-9,22,9,'#28344c');
+    R(x-11,y-9,22,1,'#41506a');
+    R(x-8,y-4,16,2,'#161e2c');
+    R(x-3,y-16,6,9,'#33415c');
+    R(x-8,y-26,16,11,'#38496a');
+    R(x-8,y-26,16,1,'#5b6a86');
+    R(x-6,y-23,12,2,'#8fd3ff');
     var ang=st.angle||-Math.PI/2;
-    var dx=Math.cos(ang)*12, dy=Math.sin(ang)*6;
-    R(x-1,y-18,3,3,'#5a6a86');
-    R(x+dx-1,y-18+dy,3,3,'#c3ccda');
-    if(st.off) R(x+8,y-24,5,5,'#ff6b6b');
-    hpBar(st,x,y-28,36);
+    var bx2=Math.cos(ang), by2=Math.sin(ang);
+    for(var t2=0;t2<10;t2++){
+      R(x+bx2*t2-1.5, y-21+by2*t2*0.55-1.5, 3,3, t2>6?'#5b6a86':'#2c3a55');
+    }
+    var blink=Math.sin(G.tick*5+st.x)>0.2;
+    R(x-2,y-22,3,2,blink?'#ff5a4a':'#48191d');
+    if(blink&&!st.off) glow(x-0.5,y-21,8,'#ff5a4a',0.26);
+    if(st.off){
+      R(x-9,y-28,7,5,'#140810');
+      R(x-8,y-27,5,3,'#ff6b6b');
+    }
+    R(x+8,y-7,1,7,'#16465e');
+    hpBar(st,x,y-32,32);
   }
+}
+
+function drawRuin(st){
+  var x=st.x,y=GY;
+  shadowAt(x,32,0.4);
+  R(x-16,y-18,32,18,'#141020');
+  R(x-16,y-18,32,1,'#271c30');
+  R(x-12,y-24,8,8,'#1a1424');
+  R(x+3,y-20,9,5,'#1a1424');
+  R(x-6,y-29,2,11,'#35263a');
+  R(x+6,y-22,1,7,'#35263a');
+  R(x-16,y-18,4,2,'#211828');
+  R(x-8,y-13,3,2,'#0c0912');
+  R(x+2,y-6,5,3,'#0c0912');
+  if(Math.sin(G.tick*3+st.x)>0.3){ A(x+2,y-15,1,1,'#ff8f5a',0.8); glow(x+2,y-15,7,'#ff5a4a',0.12); }
+}
+
+function drawSite(st){
+  var x=st.x,y=GY;
+  R(x-16,y-1,32,1,'#28344c');
+  for(var i=0;i<3;i++) R(x-13+i*13,y-30,1,30,'#28344c');
+  for(var h2=0;h2<3;h2++) R(x-14,y-28+h2*9,29,1,'#28344c');
+  for(var d=0;d<3;d++) R(x-13+d*13,y-28,1,3,'#38496a');
+  var sway=Math.round(Math.sin(G.tick*2)*1);
+  R(x+sway,y-40,1,10,'#41506a');
+  R(x-2+sway,y-31,5,2,'#5b6a86');
+  var sp=(G.tick*8)%3;
+  if(sp<1){
+    A(x-4,y-16,1,1,'#fff2b0',0.9);
+    A(x-5,y-15,1,1,'#ffc857',0.7);
+    A(x-3,y-14,1,1,'#ff8f5a',0.6);
+    glow(x-4,y-15,8,'#ffc857',0.16);
+  }
+  var p=1-st.buildT/(isShop(st.kind)?25:10);
+  R(x-15,y-34,30,4,'#080c14');
+  R(x-14,y-33,28,2,'#18202f');
+  R(x-14,y-33,28*clamp(p,0,1),2,'#8fd3ff');
+  A(x-14,y-33,28*clamp(p,0,1),1,'#d6f4ff',0.6);
+}
+
+function drawStructure(st){
+  if(st.state==='ruin'){ drawRuin(st); return; }
+  if(st.state==='building'){ drawSite(st); return; }
+  if(isShop(st.kind)) drawShop(st);
+  else drawDef(st);
+}
+
+// ============================== 人形渲染 ==============================
+// 轮廓 → 腿 → 躯干（上宽下窄）→ 手臂（外挂）→ 头（脸+发/帽+护目镜）
+function OB(x,y,w,h,c){ R(x-1,y-1,w+2,h+2,c||'#0a0f1c'); }
+function drawHuman(o){
+  var x=o.x, y=o.y===undefined?GY:o.y, f=o.face>0?1:-1;
+  var step=Math.round(Math.sin(o.walk||0)*2);
+  var OL=o.ol||'#0a0f1c';
+  var skin=o.skin||P.skin, skinD=o.skinD||P.skinD, skinL=o.skinL||P.skinL;
+  var coat=o.coat||P.coat, coatD=o.coatD||P.coatD, coatL=o.coatL||P.coatL;
+  var pants=o.pants||coatD, boots=o.boots||'#080c14';
+  var hair=o.hair||P.hair;
+  var neon=o.neon||P.cyan;
+  var bulk=o.bulk||0;
+  var shrug=o.shrug||0;
+  var tw=11+bulk*2;                       // 肩宽
+  var hw=6+bulk;                          // 头宽
+  y=y+(o.bob||0);
+  var tx=x-Math.floor(tw/2), ty=y-25-shrug;   // 躯干左上
+  var ay=y-24-shrug;                          // 手臂起点
+  var hx=x+(f>0?1:0)-Math.floor(hw/2), hy=y-33; // 头左上
+  var l1=x-4+Math.round(step*0.4), l2=x+2-Math.round(step*0.4);
+  var a1=ay-Math.round(step*0.5), a2=ay+Math.round(step*0.5);
+  shadowAt(x,tw+4,0.42);
+  // ---------- 轮廓 ----------
+  if(o.coatTail) OB(x-8-(f>0?Math.round(step):-Math.round(step)), y-24, 3, 14, OL);
+  OB(l1, y-13, 3, 9, OL);
+  OB(l2, y-13, 3, 9, OL);
+  OB(tx, ty, tw, 12+shrug, OL);
+  OB(tx-2, ay-1, 2, 11, OL);
+  OB(tx+tw, ay-1, 2, 11, OL);
+  OB(hx, hy, hw, 7, OL);
+  // ---------- 腿 ----------
+  R(l1, y-13, 3, 9, pants);
+  R(l1-1, y-4, 4, 4, boots);
+  R(l1-1, y-1, 4, 1, mix2(boots,'#4a5a78'));
+  R(l2, y-13, 3, 9, mix2(pants,coatD));
+  R(l2-1, y-4, 4, 4, boots);
+  R(l2-1, y-1, 4, 1, mix2(boots,'#4a5a78'));
+  A(l2, y-12, 1, 8, '#ffffff', 0.06);
+  // ---------- 躯干 ----------
+  var th=12+shrug;
+  R(tx, ty, tw, 4, coat);                 // 胸
+  R(tx+1, ty+4, tw-2, 4, coat);           // 腰（内收 1px）
+  R(tx, ty+8, tw-1, th-8, coat);          // 下摆
+  R(tx, ty, tw, 1, coatL);
+  A(tx+tw-3, ty+1, 3, th-1, coatD, 0.5);
+  A(tx+1, ty+1, 1, th-1, '#ffffff', 0.10);
+  A(tx+2, ty+5, 1, 5, coatD, 0.5);        // 腰部折痕
+  R(tx, y-14, tw, 1, OL);                 // 腰带
+  R(tx, y-13, tw, 1, o.belt||'#3a4a6d');
+  R(tx+2, ty-1, tw-4, 2, coatD);          // 领口
+  R(tx+2, ty-1, tw-4, 1, coatL);
+  if(o.chest){
+    var cx2=tx+Math.floor(tw/2)-1+(f>0?2:-2);
+    R(cx2, ty+4, 1, 4, neon);
+    glow(x+(f>0?2:-2), ty+6, 6, neon, (o.glowA||0.16));
+  }
+  // ---------- 手臂 ----------
+  R(tx-2, a1, 2, 9, mix2(coatD,'#000000'));
+  R(tx-2, a1+9, 2, 2, skinD);
+  R(tx+tw, a2, 2, 9, coatL);
+  A(tx+tw, a2, 1, 9, '#ffffff', 0.10);
+  R(tx+tw, a2+9, 2, 2, skin);
+  if(o.pad){
+    R(tx-3, ay-1, 4, 4, coatD);
+    R(tx-3, ay-1, 4, 1, coatL);
+    R(tx+tw-1, ay-1, 4, 4, coatD);
+    R(tx+tw-1, ay-1, 4, 1, coatL);
+  }
+  // ---------- 颈 ----------
+  R(x-1, y-27, 2, 2, skinD);
+  if(o.scarf){
+    R(x-4, y-27, 8, 1, o.scarfD||'#8a2a58');
+    R(x-4, y-26, 8, 2, o.scarf||'#ff5aa0');
+    if(f>0) R(x+4, y-25, 2, 4, o.scarf||'#ff5aa0');
+    else R(x-6, y-25, 2, 4, o.scarf||'#ff5aa0');
+  }
+  // ---------- 头 ----------
+  R(hx, hy, hw, 7, skin);
+  R(hx, hy, hw, 1, skinL);
+  R(hx+hw-1, hy+1, 1, 6, skinD);
+  R(hx+1, hy+6, hw-2, 1, skinD);
+  // 头发 / 帽子
+  if(o.hat==='cap'){
+    R(hx-1, hy-2, hw+2, 2, o.hatC||'#28344c');
+    R(hx-1, hy-2, hw+2, 1, o.hatL||'#41506a');
+    R(hx+(f>0?hw-1:-2), hy, 3, 1, o.hatC||'#28344c');
+    R(hx, hy, hw, 1, hair);
+  } else if(o.hat==='hood'){
+    R(hx-2, hy-2, hw+4, 4, o.hatC||coatD);
+    R(hx-2, hy-2, hw+4, 1, coat);
+    R(hx-2, hy+1, 2, 5, o.hatC||coatD);
+    R(hx+hw, hy+1, 2, 5, o.hatC||coatD);
+  } else if(o.hat==='helmet'){
+    R(hx-1, hy-2, hw+2, 3, o.hatC||'#38496a');
+    R(hx-1, hy-2, hw+2, 1, o.hatL||'#5b6a86');
+    R(hx-1, hy+1, 1, 3, o.hatC||'#38496a');
+    R(hx+hw, hy+1, 1, 3, o.hatC||'#38496a');
+    R(hx, hy, hw, 1, mix2(o.hatC||'#38496a','#000000'));
+  } else {
+    R(hx, hy-2, hw, 2, hair);
+    R(hx, hy-2, hw, 1, mix2(hair,'#3a4a6d'));
+    R(hx-1, hy, 1, 3, hair);
+    R(hx+hw, hy, 1, 2, hair);
+    A(hx, hy+2, hw, 1, '#000000', 0.18);
+    if(o.hairSpike){
+      R(hx+1, hy-4, 2, 2, hair);
+      R(hx+4, hy-4, 2, 2, hair);
+    }
+  }
+  // 护目镜 / 眼睛
+  if(o.mask==='visor'){
+    var vx=hx+(f>0?1:0), vw=hw-2;
+    R(vx-1, hy+2, vw+2, 3, '#070b14');
+    R(vx, hy+3, vw, 1, neon);
+    R(vx+vw-1, hy+3, 1, 1, '#ffffff');
+    glow(x+(f>0?1:0), hy+3, 7, neon, (o.visorA||0.18));
+  } else if(o.mask==='goggles'){
+    R(hx, hy+2, hw, 3, '#0b0e18');
+    R(hx+1, hy+3, 2, 1, neon);
+    R(hx+3, hy+3, 2, 1, neon);
+    glow(x, hy+3, 6, neon, (o.visorA||0.15));
+  } else if(o.mask==='band'){
+    R(hx+(f>0?2:0), hy+3, 2, 1, '#070b14');
+    R(hx+(f>0?2:0), hy+5, 2, 1, '#070b14');
+    R(hx+1, hy+6, hw-3, 1, skinD);
+  } else if(o.mask==='grin'){
+    R(hx+1, hy+3, 1, 1, o.eye||'#ff5a4a');
+    R(hx+hw-2, hy+3, 1, 1, o.eye||'#ff5a4a');
+    R(hx+2, hy+5, hw-4, 1, '#070b14');
+  } else {
+    R(hx+(f>0?hw-3:1), hy+3, 1, 1, '#070b14');
+    R(hx+(f>0?hw-3:1), hy+5, 1, 1, '#070b14');
+  }
+  if(o.beard){
+    R(hx+1, hy+6, hw-2, 2, o.beardC||'#cdc9bd');
+    R(hx+1, hy+8, hw-3, 1, o.beardC||'#cdc9bd');
+  }
+  // ---------- 轮廓光（只打在头与肩） ----------
+  var rim=(o.rimA===undefined?0.14:o.rimA);
+  A(hx+(f>0?hw:1), hy+1, 1, 5, neon, rim);
+  A(x+(f>0?Math.floor(tw/2):-Math.floor(tw/2)-1), ty+1, 1, 4, neon, rim*0.8);
+  // ---------- 道具 ----------
+  if(o.prop==='gun'){
+    var gy2=y-18-Math.round(step*0.5);
+    if(f>0){
+      R(x+8, gy2, 12, 2, '#38496a');
+      R(x+11, gy2-1, 4, 1, '#5b6a86');
+      R(x+17, gy2-1, 3, 1, neon);
+      glow(x+19, gy2, 7, neon, 0.20);
+    } else {
+      R(x-20, gy2, 12, 2, '#38496a');
+      R(x-18, gy2-1, 4, 1, '#5b6a86');
+      R(x-20, gy2-1, 3, 1, neon);
+      glow(x-20, gy2, 7, neon, 0.20);
+    }
+  } else if(o.prop==='stick'){
+    var sy2=y-17-Math.round(step*0.5);
+    var sx5=x+(f>0?8:-16);
+    R(sx5, sy2, 2, 9, '#38496a');
+    A(sx5, sy2, 2, 2, neon, 0.85);
+    glow(sx5+1, sy2+1, 7, neon, 0.20);
+  } else if(o.prop==='pipe'){
+    var py2=y-21-Math.round(step*0.5);
+    var px5=x+(f>0?8:-17);
+    R(px5, py2, 2, 12, '#4a5464');
+    R(px5, py2, 2, 2, '#8fa0b8');
+  } else if(o.prop==='bag'){
+    var bgx=x+(f>0?-9:5);
+    OB(bgx, y-19, 4, 6, OL);
+    R(bgx, y-19, 4, 6, '#5a4a2e');
+    R(bgx, y-19, 4, 1, '#8a7345');
+    R(bgx+1, y-17, 2, 2, '#c9a24a');
+  }
+}
+function mix2(c1,c2){
+  var a1=parseInt(c1.substr(1,2),16),b1=parseInt(c1.substr(3,2),16),d1=parseInt(c1.substr(5,2),16);
+  var a2=parseInt(c2.substr(1,2),16),b2=parseInt(c2.substr(3,2),16),d2=parseInt(c2.substr(5,2),16);
+  function hx(v){ v=Math.max(0,Math.min(255,Math.round(v))); return (v<16?'0':'')+v.toString(16); }
+  return '#'+hx((a1+a2)/2)+hx((b1+b2)/2)+hx((d1+d2)/2);
 }
 
 function drawPlayer(){
-  var p=G.player, x=p.x, y=GY, f=p.face;
+  var p=G.player;
   if(p.inv>0 && Math.floor(p.inv*10)%2===0) return;
-  var step=Math.sin(p.walk)>0?1:-1;
-  R(x-3,y-8,2,8,'#1a2233');
-  R(x+1,y-8,2,8,'#1a2233');
-  R(x-4+(step>0?1:0),y-2,3,2,'#2c3a55');
-  R(x+1+(step>0?0:1),y-2,3,2,'#2c3a55');
-  R(x-4,y-16,8,9,'#2f4a7a');
-  R(x-4,y-16,8,2,'#4a6ba8');
-  R(x-3,y-22,6,6,'#e8b98a');
-  R(x-3,y-24,6,3,'#1a2233');
-  R(x+(f>0?1:-2),y-20,1,1,'#0d1420');
-  if(G.purse>0) R(x+(f>0?5:-7),y-12,3,4,'#c79b58');
+  var moving=Math.abs(p.vx)>2;
+  drawHuman({
+    x:p.x, y:GY, face:p.face, walk:moving?p.walk*2:0,
+    coat:'#35618f', coatD:'#1d3550', coatL:'#5b8fc4',
+    pants:'#22303f', boots:'#0a0f1a',
+    hair:'#1b2438', hat:'none', hairSpike:true,
+    mask:'goggles', neon:'#3ee9ff', chest:true, glowA:0.18,
+    scarf:'#ff5aa0', scarfD:'#7c2450',
+    coatTail:true, prop:'bag', rimA:0.30,
+    bob:moving?0:Math.round(Math.sin(G.tick*2.2)*0.5)
+  });
 }
 
 function drawEnemy(e){
-  var x=e.x,y=GY;
-  var h=e.type==='smasher'?12:9;
-  R(x-4,y-h,8,h,'#221a2e');
-  R(x-4,y-h,8,2,'#2e2440');
-  R(x-2,y-h+3,1,1,'#ff5a4a');
-  R(x+1,y-h+3,1,1,'#ff5a4a');
-  if(e.type==='smasher') R(x+3,y-h+2,5,2,'#5a4a30');
-  else R(x-4,y-4,2,3,'#4a5464');
+  var x=e.x, y=GY, face=e.face||1;
+  var t=e.type||'thief';
+  var night=(G.phase==='night');
+  if(t==='smasher'){
+    drawHuman({x:x,y:y,face:face,walk:Math.sin(G.tick*8+x)*2,
+      coat:'#2b1f3a',coatD:'#1a1226',coatL:'#3d2c52',pants:'#1d1529',boots:'#0b0812',
+      hair:'#241a32',hat:'hood',hatC:'#2b1f3a',mask:'grin',eye:'#ff5a4a',
+      neon:'#ff3fa4',bulk:2,pad:true,prop:'pipe',rimA:0.22});
+    glow(x,GY-29,8,'#ff5a4a',0.16);
+  } else if(t==='biker'){
+    // 悬浮机车 + 骑手
+    shadowAt(x,30,0.4);
+    var bob=Math.round(Math.sin(G.tick*12)*1);
+    var yy=y+bob;
+    R(x-16,yy-10,32,4,'#241a30');
+    R(x-16,yy-10,32,1,'#4a3060');
+    R(x-12,yy-13,10,4,'#33253f');
+    R(x-2,yy-12,12,3,'#2a1e38');
+    A(x-18,yy-7,4,3,'#ff3fa4',0.5);
+    glow(x-16,yy-6,9,'#ff3fa4',0.28);
+    glow(x+16,yy-6,9,'#3ee9ff',0.22);
+    A(x-6,yy-6,14,2,'#5ad1ff',0.18);
+    drawHuman({x:x,y:yy-6,face:face,walk:0,
+      coat:'#3a2438',coatD:'#241428',coatL:'#55304f',pants:'#1a1020',boots:'#0a0710',
+      hair:'#1a1020',hat:'hood',hatC:'#3a2438',mask:'visor',neon:'#ff3fa4',visorA:0.24,
+      bulk:1,prop:'bag',rimA:0.18});
+  } else if(t==='gang'){
+    drawHuman({x:x,y:y,face:face,walk:Math.sin(G.tick*7+x)*2,
+      coat:'#3a1a24',coatD:'#241016',coatL:'#5a2a34',pants:'#1c0f16',boots:'#0a0608',
+      hair:'#1a1016',hat:'none',mask:'grin',eye:'#ffc857',
+      neon:'#ff5a4a',bulk:2,pad:true,prop:'pipe',rimA:0.24,shrug:1});
+    // 毛领
+    R(x-7,GY-27,15,2,'#6a5a4a');
+    glow(x,GY-28,10,'#ff5a4a',0.1);
+  } else if(t==='mole'){
+    drawHuman({x:x,y:y,face:face,walk:Math.sin(G.tick*8+x)*2,
+      coat:'#33405c',coatD:'#212a3f',coatL:'#4a5c80',pants:'#1a2133',boots:'#0c111c',
+      hair:'#202a3d',hat:'cap',hatC:'#2a3550',hatL:'#41506a',
+      mask:'visor',neon:'#3dffa8',visorA:night?0.34:0.10,
+      prop:'bag',rimA:night?0.14:0.05});
+    if(night) glow(x,GY-30,6,'#3dffa8',0.14);
+  } else if(t==='cyborg'){
+    // 高、半机械
+    drawHuman({x:x,y:y,face:face,walk:Math.sin(G.tick*6+x)*2,
+      coat:'#2a3040',coatD:'#191e2a',coatL:'#46526e',pants:'#1a1f2b',boots:'#0d1018',
+      hair:'#20252f',hat:'helmet',hatC:'#3a4356',hatL:'#64748f',
+      mask:'visor',neon:'#ff3fa4',visorA:0.3,bulk:1,pad:true,prop:'pipe',rimA:0.26,
+      skin:'#9aa4b4',skinD:'#7a8496',skinL:'#c0cad8'});
+    // 机械臂
+    R(x+7,GY-22,3,9,'#7d8899');
+    R(x+7,GY-22,3,1,'#aab4c2');
+    R(x+8,GY-16,1,1,'#ff3fa4');
+    // 外露管线
+    A(x+2,GY-24,1,10,'#ff3fa4',0.35);
+    glow(x,GY-22,12,'#ff3fa4',0.08);
+  } else if(t==='captain'){
+    drawHuman({x:x,y:y,face:face,walk:Math.sin(G.tick*7+x)*2,
+      coat:'#1e2433',coatD:'#12161f',coatL:'#3a455c',pants:'#14181f',boots:'#0a0d12',
+      hair:'#1a1f28',hat:'helmet',hatC:'#2a3346',hatL:'#4d5f7f',
+      mask:'visor',neon:'#ff5a4a',visorA:0.34,bulk:1,pad:true,prop:'gun',
+      rimA:0.3,coatTail:true});
+    // 肩章
+    R(x-8,GY-25,4,2,'#ffc857');
+    R(x+5,GY-25,4,2,'#ffc857');
+    // 精英光环
+    glow(x,GY-18,18,'#ff5a4a',0.10);
+  } else {
+    drawHuman({x:x,y:y,face:face,walk:Math.sin(G.tick*9+x)*2,
+      coat:'#221830',coatD:'#150f20',coatL:'#32253f',pants:'#160f22',boots:'#080610',
+      hair:'#2a1f38',hat:'hood',hatC:'#2a1f38',mask:'visory',neon:'#ff5a4a',visorA:0.26,
+      prop:'bag',rimA:0.16});
+  }
   if(e.hp<e.maxHp){
-    R(x-4,y-h-4,8,2,'#2a1016');
-    R(x-4,y-h-4,8*clamp(e.hp/e.maxHp,0,1),2,'#ff5a4a');
+    var bw=(t==='boss'||t==='captain')?18:(t==='cyborg'?14:11);
+    R(x-bw/2-1,y-40,bw+2,4,'#080c14');
+    R(x-bw/2,y-39,bw,2,'#2a1016');
+    R(x-bw/2,y-39,bw*clamp(e.hp/e.maxHp,0,1),2,e.boss?'#ffc857':'#ff5a4a');
   }
 }
 
 function drawFighter(f){
-  var x=f.x,y=GY;
-  var col=f.type==='melee'?'#2f6b4a':(f.type==='ranged'?'#3a5a8a':'#5a4a7a');
-  var h=f.type==='robot'?14:12;
-  R(x-3,y-h,6,h-2,col);
-  R(x-3,y-h,6,2,'#8fd3ff');
-  R(x-2,y-h+3,4,3,'#e8b98a');
-  R(x-1,y-h+4,1,1,'#0d1420');
-  if(f.type==='ranged') R(x+(f.face>0?3:-5),y-h+5,3,2,'#c3ccda');
-  if(f.type==='robot') R(x-4,y-h-2,8,2,'#8fd3ff');
+  if(f.type==='robot'){
+    var x=f.x, y=GY;
+    var fl=Math.sin(G.tick*10+x)*0.5+0.5;
+    shadowAt(x,20,0.42);
+    // 推进器
+    R(x-6,y-9,4,5,'#20293d');
+    R(x+2,y-9,4,5,'#20293d');
+    A(x-5,y-6,2,4,'#3ee9ff',0.3+0.35*fl);
+    A(x+3,y-6,2,4,'#3ee9ff',0.3+0.35*fl);
+    glow(x-4,y-5,8,'#3ee9ff',0.18*fl+0.08);
+    glow(x+4,y-5,8,'#3ee9ff',0.18*fl+0.08);
+    // 机身轮廓
+    R(x-8,y-26,16,18,'#05070d');
+    R(x-7,y-25,14,16,'#33405c');
+    R(x-7,y-25,14,1,'#5b6a86');
+    A(x+4,y-24,3,15,'#1a2334',0.8);
+    // 胸口核心
+    R(x-2,y-20,4,4,'#080c14');
+    R(x-1,y-19,2,2,'#3ee9ff');
+    glow(x,y-18,10,'#3ee9ff',0.26);
+    // 肩炮
+    R(x+(f.face>0?6:-10),y-24,4,8,'#28344c');
+    R(x+(f.face>0?9:-12),y-23,3,2,'#8fd3ff');
+    // 头
+    R(x-5,y-32,10,7,'#05070d');
+    R(x-4,y-31,8,5,'#38496a');
+    R(x-4,y-31,8,1,'#5b6a86');
+    R(x-3,y-29,6,2,'#080c14');
+    R(x-2,y-29,4,1,'#ff5a4a');
+    glow(x,y-29,8,'#ff5a4a',0.18);
+    // 天线
+    R(x+3,y-36,1,5,'#41506a');
+    if(Math.sin(G.tick*4)>0.6) A(x+3,y-37,1,1,'#3dffa8',0.9);
+  } else if(f.type==='ranged'){
+    drawHuman({
+      x:f.x, y:GY, face:f.face||1, walk:Math.sin(G.tick*7+f.x)*2,
+      coat:'#2b4a72', coatD:'#1a2c47', coatL:'#4571a8',
+      pants:'#1b2740', boots:'#0a1120', hair:'#1b2438',
+      hat:'cap', hatC:'#1b2740', hatL:'#3d5b86',
+      mask:'visor', neon:'#3ee9ff', visorA:0.22,
+      prop:'gun', pad:false, rimA:0.16
+    });
+  } else {
+    drawHuman({
+      x:f.x, y:GY, face:f.face||1, walk:Math.sin(G.tick*7+f.x)*2,
+      coat:'#2a5a40', coatD:'#183524', coatL:'#3d7d59',
+      pants:'#16281c', boots:'#08110c', hair:'#1b2438',
+      hat:'helmet', hatC:'#28503a', hatL:'#3d7a58',
+      mask:'visor', neon:'#3ee9ff', visorA:0.24,
+      prop:'stick', pad:true, rimA:0.18
+    });
+  }
   if(f.hp<f.maxHp){
-    R(x-4,y-h-4,8,2,'#2a1016');
-    R(x-4,y-h-4,8*clamp(f.hp/f.maxHp,0,1),2,'#4fd88a');
+    var bw=11;
+    R(f.x-bw/2-1,GY-40,bw+2,4,'#080c14');
+    R(f.x-bw/2,GY-39,bw,2,'#2a1016');
+    R(f.x-bw/2,GY-39,bw*clamp(f.hp/f.maxHp,0,1),2,'#4fd88a');
   }
 }
 
 function drawZhou(){
   if(!G.zhou||G.zhouJoined) return;
-  var x=-36,y=GY;
-  R(x-3,y-18,6,18,'#3a3a2a');
-  R(x-3,y-18,6,2,'#55553a');
-  R(x-2,y-24,4,6,'#e8b98a');
-  R(x-2,y-26,4,3,'#d8d8d0');
-  var bob=Math.sin(G.tick*0.12)*1.2;
-  R(x-1,y-32+bob,2,4,'#ffd86b');
-  R(x-1,y-27+bob,2,2,'#ffd86b');
+  drawHuman({
+    x:-36, y:GY, face:1, walk:0,
+    coat:'#4a4232', coatD:'#332d22', coatL:'#6b5f46',
+    pants:'#2a2620', boots:'#15120e', hair:'#c8c4b8',
+    hat:'cap', hatC:'#38496a', hatL:'#4d6288',
+    mask:'band', eye:'#070b14', beard:true, beardC:'#cdc9bd',
+    neon:'#ffc857', h:32, shrug:1, rimA:0.10
+  });
+  // 烟头
+  if(Math.sin(G.tick*2.4)>0.1){
+    A(-32,GY-26,1,1,'#ff8f5a',0.9);
+    glow(-32,GY-26,5,'#ff5a4a',0.18);
+  }
+  // 任务标记
+  var bob=Math.round(Math.sin(G.tick*2)*1.5);
+  R(-37,GY-44+bob,2,5,'#ffd86b');
+  R(-37,GY-38+bob,2,2,'#ffd86b');
+  glow(-36,GY-42+bob,8,'#ffd86b',0.16);
 }
 
 function drawOrderGhost(){
@@ -1580,14 +2779,15 @@ function drawOrderGhost(){
     var s=slots[i];
     if(s.st) continue;
     if(Math.abs(s.x-p.x)<18){
-      var bob=Math.sin(G.tick*0.2)*1.5;
-      R(s.x-14,GY-20+bob,28,20,'rgba(143,211,255,0.25)');
-      R(s.x-14,GY-20+bob,28,1,'#8fd3ff');
-      R(s.x-14,GY-1+bob,28,1,'#8fd3ff');
-      R(s.x-14,GY-20+bob,1,20,'#8fd3ff');
-      R(s.x+13,GY-20+bob,1,20,'#8fd3ff');
+      var bob=Math.round(Math.sin(G.tick*3)*1);
+      A(s.x-15,GY-30+bob,30,30,'#3ee9ff',0.08);
+      ctx.strokeStyle='#3ee9ff';
+      ctx.lineWidth=1;
+      ctx.strokeRect(Math.round(s.x-15+ox)+0.5,GY-30+bob,29,29);
+      glow(s.x,GY-15+bob,20,'#3ee9ff',0.08);
+      text3(s.x-5,GY-17+bob,'OK','#7bfff0');
     } else {
-      R(s.x-1,GY-3,2,2,'rgba(143,211,255,0.35)');
+      A(s.x-1,GY-3,2,2,'#3ee9ff',0.28);
     }
   }
 }
@@ -1597,28 +2797,38 @@ function drawPrompt(){
   if(!it) return;
   var x=0;
   if(it.t==='home') x=0;
-  else if(it.t==='hardware') x=-52;
+  else if(it.t==='hardware') x=-54;
   else if(it.t==='zhou') x=-36;
   else if(it.t==='shop') x=it.st.x;
   else if(it.t==='slot') x=it.slot.x;
-  var y=GY-(it.t==='home'?88:(it.t==='shop'?56:50));
-  var bob=Math.sin(G.tick*0.18)*1.5;
-  // 对话气泡：白底 + 黑色 E
-  R(x-6,y+bob,12,9,'#0b1120');
-  R(x-5,y+1+bob,10,7,'#e6ecf5');
-  R(x-5,y+1+bob,10,1,'#ffffff');
-  R(x-1,y+3+bob,1,4,'#0b1120');
-  R(x-1,y+3+bob,3,1,'#0b1120');
-  R(x+1,y+6+bob,1,1,'#0b1120');
-  R(x-2,y+9+bob,3,2,'#e6ecf5');
+  var y=GY-44;
+  if(it.t==='home'){ y=Math.max(40,GY-(84+(G.homeLevel>3?8:0)+(G.homeLevel>5?8:0))-16); }
+  else if(it.t==='hardware'){ y=GY-62-14; }
+  else if(it.t==='shop'){ y=GY-(SHOP_ART[it.st.kind].h0+(it.st.level-1)*7)-16; }
+  else if(it.t==='zhou'){ y=GY-50; }
+  var bob=Math.round(Math.sin(G.tick*2.4)*1.5);
+  A(x-7,y+bob,14,12,'#3ee9ff',0.10);
+  R(x-6,y+bob,12,10,'#070b12');
+  R(x-6,y+bob,12,1,'#3ee9ff');
+  R(x-6,y+bob,1,10,'#3ee9ff');
+  R(x+5,y+bob,1,10,'#3ee9ff');
+  R(x-6,y+9+bob,12,1,'#3ee9ff');
+  text3(x-1,y+2+bob,'E','#e6ecf5');
+  R(x-2,y+10+bob,2,2,'#070b12');
+  glow(x,y+5+bob,11,'#3ee9ff',0.13);
 }
 
 function drawCoins(){
   for(var i=0;i<G.gcoins.length;i++){
     var c=G.gcoins[i];
-    var w=Math.sin(G.tick*0.3+i)*0.5+1.5;
-    R(c.x-w/2,c.y,w,3,'#ffd86b');
-    R(c.x-w/2,c.y,w,1,'#fff0b8');
+    var t=Math.sin(G.tick*3.4+i*1.1);
+    var w=Math.max(2,Math.abs(t)*3+1.5);
+    var yy=c.y+Math.round(Math.sin(G.tick*4+i)*1);
+    A(c.x-w/2,yy+1,w,4,'#c98f1a',0.3);
+    R(c.x-w/2,yy,w,4,'#ffd86b');
+    R(c.x-w/2,yy,w,1,'#fff3c4');
+    R(c.x-w/2,yy+3,w,1,'#b8822a');
+    glow(c.x,yy+2,7,'#ffc857',0.18);
   }
 }
 
@@ -1635,67 +2845,405 @@ function drawParts(){
 function drawProjs(){
   for(var i=0;i<G.projs.length;i++){
     var p=G.projs[i];
-    R(p.x-1,p.y,3,1,'#ffe9a8');
+    R(p.x-2,p.y,4,1,'#ffe9a8');
+    R(p.x-1,p.y,2,1,'#ffffff');
+    glow(p.x,p.y,6,'#ffc857',0.26);
   }
 }
 
+// ============================== 氛围 ==============================
 function drawNightOverlay(){
   if(G.phase!=='night'&&G.phase!=='dusk') return;
-  var a=G.phase==='night'?0.42:0.42*(1-(G.t/DUSK_LEN));
-  ctx.fillStyle='rgba(6,9,26,'+a.toFixed(2)+')';
+  var a=G.phase==='night'?1:1-(G.t/DUSK_LEN);
+  ctx.fillStyle='rgba(8,10,30,'+(0.30*a).toFixed(3)+')';
   ctx.fillRect(0,0,VW,GY+8);
-  var grd=ctx.createRadialGradient(160+ox,GY-20,4,160+ox,GY-20,70);
-  grd.addColorStop(0,'rgba(255,196,90,0.20)');
-  grd.addColorStop(1,'rgba(255,196,90,0)');
-  ctx.fillStyle=grd;
+  var g1=ctx.createRadialGradient(160,GY-20,6,160,GY-20,96);
+  g1.addColorStop(0,'rgba(255,196,90,'+(0.13*a).toFixed(3)+')');
+  g1.addColorStop(1,'rgba(255,196,90,0)');
+  ctx.fillStyle=g1;
   ctx.fillRect(0,0,VW,GY+8);
+  var g2=ctx.createLinearGradient(0,0,0,64);
+  g2.addColorStop(0,'rgba(3,5,14,0.55)');
+  g2.addColorStop(1,'rgba(3,5,14,0)');
+  ctx.fillStyle=g2;
+  ctx.fillRect(0,0,VW,64);
 }
 
 function drawRain(){
   if(!G.rain) return;
-  ctx.strokeStyle='rgba(150,190,255,0.22)';
   ctx.lineWidth=1;
-  for(var i=0;i<60;i++){
-    var x=((i*37+G.tick*3)%VW);
-    var y=((i*53+G.tick*9)%(GY+20));
-    ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x-2,y+6); ctx.stroke();
+  for(var i=0;i<64;i++){
+    var x=((i*53+G.tick*90)%(VW+60))-30;
+    var y=((i*71+G.tick*260)%(GY+30))-20;
+    var len=4+((i*7)%4);
+    var a=0.09+((i%5)*0.03);
+    ctx.strokeStyle='rgba(150,200,255,'+a.toFixed(2)+')';
+    ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x-2,y+len); ctx.stroke();
+  }
+  for(var j=0;j<14;j++){
+    var sx=((j*97+G.tick*140)%(VW+40))-20;
+    var ph=(G.tick*2.2+j*0.7)%1;
+    if(ph<0.25){
+      var r=1+ph*8;
+      SA(sx-r/2,GY+3,r,1,'#9ec8ff',0.16*(1-ph*4));
+    }
   }
 }
 
+var _VIG=null,_VIGT=false;
+function drawPost(){
+  if(!_VIGT){
+    _VIGT=true;
+    var s=mkCanvas(VW,VH);
+    if(s){
+      var g=s.g;
+      var grd=g.createRadialGradient(VW/2,VH*0.5,VH*0.32,VW/2,VH*0.5,VH*0.95);
+      grd.addColorStop(0,'rgba(0,0,0,0)');
+      grd.addColorStop(0.6,'rgba(0,0,0,0.14)');
+      grd.addColorStop(1,'rgba(0,0,0,0.55)');
+      g.fillStyle=grd; g.fillRect(0,0,VW,VH);
+      _VIG=s.c;
+    }
+  }
+  if(_VIG) ctx.drawImage(_VIG,0,0);
+  ctx.fillStyle='rgba(0,0,0,0.045)';
+  for(var y=0;y<VH;y+=3) ctx.fillRect(0,y,VW,1);
+}
+
+var _BLM=null,_BLMT=false;
+function drawBloom(){
+  if(!_BLMT){ _BLMT=true; _BLM=mkCanvas(VW>>2,VH>>2); }
+  if(!_BLM) return;
+  var b=_BLM;
+  b.g.clearRect(0,0,b.c.width,b.c.height);
+  b.g.imageSmoothingEnabled=true;
+  b.g.drawImage(cv,0,0,b.c.width,b.c.height);
+  var a=G.phase==='night'?0.30:(G.phase==='dusk'?0.18:0.08);
+  ctx.save();
+  ctx.imageSmoothingEnabled=true;
+  ctx.globalCompositeOperation='lighter';
+  ctx.globalAlpha=a;
+  ctx.drawImage(b.c,0,0,VW,VH);
+  ctx.restore();
+  ctx.globalAlpha=1;
+  ctx.globalCompositeOperation='source-over';
+  ctx.imageSmoothingEnabled=false;
+}
+
+
+// ============================== 八位特殊 NPC ==============================
+function drawNpc(id,x,y,opt){
+  y=y===undefined?GY:y;
+  opt=opt||{};
+  var face=opt.face||1;
+  var walk=opt.walk||0;
+  var bob=opt.bob===undefined?Math.round(Math.sin(G.tick*1.6+x)*0.6):opt.bob;
+  var night=(G.phase==='night');
+  if(id==='zhou'){
+    drawHuman({x:x,y:y,face:face,walk:walk,bob:bob,
+      coat:'#4a4232',coatD:'#332d22',coatL:'#6b5f46',pants:'#2a2620',boots:'#15120e',
+      hair:'#c8c4b8',hat:'cap',hatC:'#38496a',hatL:'#4d6288',
+      mask:'band',eye:'#070b14',beard:true,beardC:'#cdc9bd',neon:'#ffc857',shrug:1,rimA:0.10});
+    if(Math.sin(G.tick*2.4)>0.1){ A(x+3,y-26,1,1,'#ff8f5a',0.9); glow(x+3,y-26,5,'#ff5a4a',0.18); }
+  } else if(id==='bao'){
+    drawHuman({x:x,y:y,face:face,walk:walk,bob:bob,
+      coat:'#3a2a22',coatD:'#241a14',coatL:'#5a4234',pants:'#1e1610',boots:'#0a0806',
+      hair:'#c04a2a',hat:'none',hairSpike:true,mask:'band',eye:'#0a0806',
+      neon:'#ff7a3a',bulk:1,pad:true,rimA:0.16});
+    // 莫西干
+    R(x-1,y-38,4,4,'#d2603a');
+    R(x,y-40,2,2,'#ff8a5a');
+    // 铁链
+    for(var ch=0;ch<5;ch++) A(x-7+ch*3,y-22+ch*2,2,2,'#9aa4b4',0.75);
+    glow(x,y-24,10,'#ff7a3a',0.08);
+  } else if(id==='chen'){
+    drawHuman({x:x,y:y,face:face,walk:walk,bob:bob,
+      coat:'#5f7a5a',coatD:'#3d4f3a',coatL:'#7e9a74',pants:'#37452f',boots:'#151a12',
+      hair:'#c8c4b8',hat:'cap',hatC:'#3d4f3a',hatL:'#5f7a5a',
+      mask:'band',eye:'#070b14',beard:true,beardC:'#b8b4a8',neon:'#a8c47e',
+      shrug:1,rimA:0.12,prop:'gun'});
+    // 眼罩/疤
+    R(x-2,y-31,3,1,'#2a1a14');
+    R(x-2,y-24,1,3,'#8a5a4a');
+  } else if(id==='mei'){
+    drawHuman({x:x,y:y,face:face,walk:walk,bob:bob,
+      coat:'#7a1f3a',coatD:'#4e1426',coatL:'#a83054',pants:'#2a1620',boots:'#120a10',
+      hair:'#1a1220',hat:'none',mask:'none',neon:'#ffc857',rimA:0.14});
+    // 盘发
+    R(x-4,y-37,8,3,'#1a1220');
+    R(x+3,y-39,4,4,'#241a2a');
+    // 手包
+    R(x+(face>0?7:-10),y-18,4,5,'#2a1a20');
+    R(x+(face>0?8:-9),y-19,2,1,'#c9a24a');
+    // 耳环
+    A(x+(face>0?4:-5),y-28,1,2,'#ffc857',0.9);
+  } else if(id==='ni'){
+    drawHuman({x:x,y:y,face:face,walk:walk,bob:bob,
+      coat:'#23303f',coatD:'#141c26',coatL:'#3d566e',pants:'#161e28',boots:'#0a0e14',
+      hair:'#2a3a44',hat:'hood',hatC:'#23303f',mask:'none',neon:'#4fc6c0',rimA:0.2,hairSpike:true});
+    // 耳机
+    R(x-5,y-35,2,2,'#4fc6c0');
+    R(x+4,y-35,2,2,'#4fc6c0');
+    R(x-1,y-37,3,1,'#2a3a44');
+    // 全息终端
+    var hx2=x+(face>0?8:-16);
+    A(hx2,y-24,8,10,'#4fc6c0',0.22);
+    R(hx2,y-24,8,1,'#4fc6c0');
+    R(hx2,y-15,8,1,'#4fc6c0');
+    for(var hl=0;hl<3;hl++) A(hx2+1,y-22+hl*3,6,1,'#7bfff0',0.5);
+    glow(hx2+4,y-20,12,'#4fc6c0',0.16);
+  } else if(id==='yu'){
+    drawHuman({x:x,y:y,face:face,walk:walk,bob:bob,
+      coat:'#d8e6e8',coatD:'#a8bcc0',coatL:'#ffffff',pants:'#8aa0a8',boots:'#3a4a52',
+      hair:'#3a2a24',hat:'none',mask:'none',neon:'#7ec8e8',rimA:0.14,skin:'#f0cba8'});
+    // 马尾
+    R(x-5,y-36,3,8,'#3a2a24');
+    // 听诊器
+    A(x+1,y-26,1,6,'#3a4a52',0.9);
+    R(x+1,y-20,2,2,'#8fa0b8');
+    // 医药箱
+    R(x+(face>0?7:-11),y-17,4,5,'#e8eef0');
+    R(x+(face>0?8:-10),y-15,2,1,'#3dffa8');
+  } else if(id==='man'){
+    drawHuman({x:x,y:y,face:face,walk:walk,bob:bob,
+      coat:'#e0a8c8',coatD:'#b87898',coatL:'#ffd0e8',pants:'#3a2a38',boots:'#1a1218',
+      hair:'#ff8fc8',hat:'none',hairSpike:true,mask:'none',neon:'#ff3fa4',rimA:0.2,skin:'#f4cfa8'});
+    // 双马尾
+    R(x-5,y-33,2,8,'#ff8fc8');
+    R(x+4,y-33,2,8,'#ff8fc8');
+    R(x-5,y-26,2,2,'#e070b0');
+    R(x+4,y-26,2,2,'#e070b0');
+    // 手机 + 补光
+    var px8=x+(face>0?8:-12);
+    R(px8,y-20,3,5,'#1a1a22');
+    R(px8,y-20,3,1,'#ff3fa4');
+    glow(px8+1,y-17,10,'#ffffff',0.10);
+  } else if(id==='zero'){
+    drawHuman({x:x,y:y,face:face,walk:walk,bob:bob,
+      coat:'#2a2a33',coatD:'#17171e',coatL:'#3e3e4d',pants:'#1a1a20',boots:'#0a0a0e',
+      hair:'#8f8fa8',hat:'hood',hatC:'#2a2a33',mask:'visor',neon:'#6a6a80',visorA:0.18,
+      rimA:0.24,skin:'#c8c8d4',skinD:'#9a9aa8'});
+    // 雨滴/虚化
+    A(x-6,y-30,13,28,'#8f8fa8',0.06);
+    glow(x,y-24,20,'#8f8fa8',0.10);
+    for(var dz=0;dz<5;dz++){
+      var dzz=(G.tick*0.6+dz*0.2)%1;
+      A(x-6+dz*3,y-32+dzz*30,1,3,'#c8d8ff',0.12);
+    }
+  }
+  // 头顶标记
+  if(opt.mark){
+    var mb=Math.round(Math.sin(G.tick*2)*1.5);
+    R(x-1,y-46+mb,2,5,opt.mark);
+    R(x-1,y-40+mb,2,2,opt.mark);
+    glow(x,y-44+mb,8,opt.mark,0.16);
+  }
+}
+
+function drawNpcStreet(){
+  var list=G.street||[];
+  for(var i=0;i<list.length;i++){
+    var n=list[i];
+    drawNpc(n.id,n.x,GY,{face:1,mark:'#ffd86b'});
+  }
+}
+var NPCS_BY_ID={};
+(function(){for(var i=0;i<NPCS.length;i++) NPCS_BY_ID[NPCS[i].id]=NPCS[i];})();
+
+
+// ============================== 立绘图集（开发/文档用） ==============================
+function renderCell(cw,ch,groundY,fn){
+  var c=mkCanvas(cw,ch);
+  if(!c) return null;
+  var oc=ctx, oo=ox, og=GY;
+  ctx=c.g; ox=0; GY=groundY;
+  try{ fn(c.g); }
+  finally{ ctx=oc; ox=oo; GY=og; }
+  return c.c;
+}
+
+var SHEET_DEFS={
+  npc:{
+    cols:4, cellW:54, cellH:66, ground:52, scale:4, title:'八位特殊 NPC',
+    items:function(){
+      var out=[];
+      for(var i=0;i<NPCS.length;i++){
+        var n=NPCS[i];
+        out.push({label:n.name, sub:n.role, draw:(function(id){return function(x,y){ drawNpc(id,x,y,{face:1,bob:0}); };})(n.id)});
+      }
+      return out;
+    }
+  },
+  enemy:{
+    cols:4, cellW:54, cellH:66, ground:52, scale:4, title:'敌人',
+    items:function(){
+      var out=[];
+      for(var k in ENEMY){
+        var e=ENEMY[k];
+        out.push({label:e.name, sub:'HP '+e.hp+' · 第'+e.day+'天',
+          draw:(function(t){return function(x,y){ drawEnemy({type:t,x:x,face:1,hp:100,maxHp:100}); };})(k)});
+      }
+      return out;
+    }
+  },
+  shop:{
+    cols:4, cellW:64, cellH:98, ground:92, scale:3, title:'商店建筑',
+    items:function(){
+      var out=[];
+      for(var k in SHOPS){
+        var c=SHOPS[k];
+        out.push({label:c.name, sub:'💰'+c.cost+' · '+c.power+'kW',
+          draw:(function(kk){return function(x,y){
+            drawShop({kind:kk,x:x,level:1,state:'ok',hp:100,maxHp:100,stock:10,restockT:0,off:false,staff:1,angle:-Math.PI/2});
+          };})(k)});
+      }
+      return out;
+    }
+  },
+  defense:{
+    cols:5, cellW:54, cellH:60, ground:56, scale:4, title:'防御设施',
+    items:function(){
+      var out=[];
+      for(var k in DEFS){
+        var d=DEFS[k];
+        out.push({label:d.name, sub:'耐久 '+d.hp+' · '+d.power+'kW',
+          draw:(function(kk){return function(x,y){
+            drawDef({kind:kk,x:x,hp:100,maxHp:100,angle:-Math.PI/2,off:false});
+          };})(k)});
+      }
+      return out;
+    }
+  },
+  fighter:{
+    cols:4, cellW:54, cellH:66, ground:52, scale:4, title:'战斗人员',
+    items:function(){
+      var out=[];
+      var order=['melee','ranged','robot'];
+      for(var i=0;i<order.length;i++){
+        var k=order[i], cfg=FIGHTERS[k];
+        out.push({label:cfg.name, sub:'HP '+cfg.hp+' · 伤害 '+cfg.dmg,
+          draw:(function(kk){return function(x,y){ drawFighter({type:kk,x:x,face:1,hp:100,maxHp:100}); };})(k)});
+      }
+      out.push({label:'店员', sub:'商店员工 · 收入+35%',
+        draw:function(x,y){
+          drawHuman({x:x,y:y,face:1,walk:0,
+            coat:'#d8d0bc',coatD:'#b0a890',coatL:'#f2ecdc',
+            pants:'#3a4a56',boots:'#1a222a',hair:'#2a2228',
+            hat:'none',mask:'none',neon:'#3ee9ff',rimA:0.12});
+          // 围裙
+          R(x-5,y-22,10,10,'#2c4a5e');
+          R(x-5,y-22,10,1,'#4a7a94');
+          // 柜台
+          R(x-11,y-13,22,3,'#4a3a28');
+          R(x-11,y-13,22,1,'#6b5a40');
+          R(x-11,y-10,22,1,'#241a12');
+          // 收银机
+          R(x+3,y-18,5,4,'#1a2230');
+          R(x+4,y-17,3,1,'#3ee9ff');
+        }});
+      return out;
+    }
+  }
+};
+
+function buildSheet(name){
+  var d=SHEET_DEFS[name];
+  if(!d) return null;
+  var items=d.items();
+  var rows=Math.ceil(items.length/d.cols);
+  var labelH=16;
+  var W=d.cols*d.cellW+20, H=26+rows*(d.cellH+labelH)+10;
+  var S=d.scale;
+  var sheet=mkCanvas(W*S,H*S);
+  if(!sheet) return null;
+  var g=sheet.g;
+  g.imageSmoothingEnabled=false;
+  g.setTransform(S,0,0,S,0,0);
+  // 背景
+  g.fillStyle='#080b12'; g.fillRect(0,0,W,H);
+  g.fillStyle='#0d1320'; g.fillRect(0,0,W,20);
+  g.fillStyle='#101a2a';
+  for(var bx=0;bx<W;bx+=8) g.fillRect(bx,20,1,H-20);
+  g.fillStyle='#7ff0c4';
+  g.font='9px "Microsoft YaHei",sans-serif';
+  g.textBaseline='top';
+  g.fillText(d.title, 8, 6);
+  // 单元格
+  for(var i=0;i<items.length;i++){
+    var it=items[i];
+    var col=i%d.cols, row=Math.floor(i/d.cols);
+    var cx=10+col*d.cellW, cy=24+row*(d.cellH+labelH);
+    g.fillStyle='#0a0f18';
+    g.fillRect(cx,cy,d.cellW-4,d.cellH-2);
+    g.fillStyle='#141d2c';
+    g.fillRect(cx,cy,d.cellW-4,1);
+    // 地面线
+    g.fillStyle='#1b2636';
+    g.fillRect(cx+2,cy+d.ground,d.cellW-8,1);
+    var cell=renderCell(d.cellW-4,d.cellH,d.ground,function(cc){
+      it.draw(d.cellW/2-2,d.ground);
+    });
+    if(cell) g.drawImage(cell,cx+2,cy+2,d.cellW-4,d.cellH-2);
+    // 标签
+    g.fillStyle='#cfe0f5';
+    g.font='7px "Microsoft YaHei",sans-serif';
+    g.fillText(it.label, cx+3, cy+d.cellH+1);
+    g.fillStyle='#5f7a9a';
+    g.font='6px "Microsoft YaHei",sans-serif';
+    g.fillText(it.sub||'', cx+3, cy+d.cellH+8);
+  }
+  try{ return sheet.c.toDataURL('image/png'); }catch(e){ return null; }
+}
+window.__SHEET__=function(name){ return buildSheet(name); };
+window.__SHEET_NAMES__=function(){ var a=[]; for(var k in SHEET_DEFS) a.push(k); return a; };
+
+// ============================== 主绘制 ==============================
 function draw(){
   ox=-Math.round(G.camX)+VW/2;
   ctx.clearRect(0,0,VW,VH);
+  var night=G.phase==='night'?1:(G.phase==='dusk'?0.55:0);
   drawSky();
-  var night=G.phase==='night'?1:(G.phase==='dusk'?0.5:0);
-  drawSkyline(0.15,GY-20,0.7,night);
-  drawSkyline(0.35,GY-6,1.0,night);
+  drawSkyline(0.08,GY-18,0.62,night,true);
+  drawSkyline(0.22,GY-6,0.95,night,false);
+  drawHoloAds(night);
   drawGround();
+  drawUtilities();
+  drawProps(night);
   drawHardware();
   drawHome();
-  drawZhou();
   for(var i=0;i<slots.length;i++){ if(slots[i].st) drawStructure(slots[i].st); }
+  drawReflections(night);
   drawOrderGhost();
-  drawCoins();
+  drawNpcStreet();
+  drawZhou();
   for(var j=0;j<G.fighters.length;j++) drawFighter(G.fighters[j]);
   for(var k=0;k<G.enemies.length;k++) drawEnemy(G.enemies[k]);
   drawPlayer();
+  drawCoins();
   drawProjs();
   drawParts();
   drawPrompt();
   drawTutArrow();
   drawNightOverlay();
   drawRain();
+  drawBloom();
+  drawPost();
   if(G.flash>0){
     ctx.fillStyle='rgba(255,80,80,'+(G.flash*0.6).toFixed(2)+')';
     ctx.fillRect(0,0,VW,VH);
   }
   var pw=clamp(G.dayRevenue/Math.max(1,G.dayTarget),0,1);
-  ctx.fillStyle='rgba(10,14,24,0.7)'; ctx.fillRect(VW/2-40,2,80,5);
-  ctx.fillStyle='#2b3550'; ctx.fillRect(VW/2-40,2,80,5);
-  ctx.fillStyle=G.dayRevenue>=G.dayTarget?'#7ff0c4':'#8fd3ff';
+  ctx.fillStyle='rgba(6,10,18,0.72)';
+  ctx.fillRect(VW/2-41,1,82,7);
+  ctx.fillStyle='#121a29';
+  ctx.fillRect(VW/2-40,2,80,5);
+  ctx.fillStyle=G.dayRevenue>=G.dayTarget?'#7ff0c4':'#3ee9ff';
   ctx.fillRect(VW/2-40,2,80*pw,5);
+  if(pw>0){
+    ctx.fillStyle='rgba(255,255,255,0.35)';
+    ctx.fillRect(VW/2-40,2,80*pw,1);
+  }
 }
-
 // ============================== 主循环 ==============================
 var last=0;
 function loop(ts){
@@ -1706,7 +3254,7 @@ function loop(ts){
     G.tick+=dt;
     var sdt=dt*(G.phase==='night'?1:G.speed);
     updatePlayer(sdt);
-    if(G.phase==='day'||G.phase==='dusk') updateShops(sdt);
+    if(G.phase==='day'||G.phase==='dusk'||G.phase==='night') updateShops(sdt);
     updateCoins(sdt);
     if(G.phase==='night'){
       updateEnemies(dt); updateFighters(dt); updateTurrets(dt); updateProjs(dt);
@@ -1719,6 +3267,7 @@ function loop(ts){
     updatePhase(dt);
     updateTutorial();
     syncObjective();
+    checkNpcTasks();
   }
   draw();
   requestAnimationFrame(loop);

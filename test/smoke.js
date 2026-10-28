@@ -236,6 +236,7 @@ run('night spawns waves', () => {
 run('turret damages and kills a lone enemy', () => {
   G.over = false;
   G.phase = 'day'; G.paused = false; G.purse = 99999;
+  G.day = Math.max(G.day, 8); // 炮塔第 8 天解锁
   act('order:turret');
   const free = D.slots.find(s => !s.st);
   if (free) D.placeOrder(free);
