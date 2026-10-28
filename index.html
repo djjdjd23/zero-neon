@@ -9,14 +9,17 @@
 <title>零点霓虹 · Zero Neon</title>
 <style>
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;
-    -webkit-touch-callout:none;-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none;
-    -webkit-user-drag:none;user-drag:none}
-  ::selection{background:transparent}
-  ::-moz-selection{background:transparent}
+    -webkit-touch-callout:none!important;-webkit-user-select:none!important;-moz-user-select:none!important;
+    -ms-user-select:none!important;user-select:none!important;-webkit-user-drag:none}
+  ::selection{background:transparent!important;color:inherit!important}
+  ::-moz-selection{background:transparent!important}
+  ::-webkit-selection{background:transparent!important}
   html,body{margin:0;padding:0;height:100%;width:100%;background:#04050a;overflow:hidden;
     font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",monospace;
-    color:#e6ecf5;-webkit-user-select:none;user-select:none;touch-action:none;overscroll-behavior:none;
-    -webkit-touch-callout:none;-webkit-text-size-adjust:100%}
+    color:#e6ecf5;touch-action:none;overscroll-behavior:none;
+    -webkit-touch-callout:none!important;-webkit-user-select:none!important;user-select:none!important;
+    -webkit-text-size-adjust:100%;position:fixed;inset:0}
+  canvas,img{-webkit-user-drag:none;user-drag:none;-webkit-user-select:none;user-select:none;pointer-events:none}
   #stage{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;overflow:hidden}
   #game{position:relative;background:#000;overflow:hidden;--s:1px;transform-origin:center center;will-change:transform}
   canvas{display:block;width:100%;height:100%;image-rendering:pixelated;image-rendering:crisp-edges;-ms-interpolation-mode:nearest-neighbor}
@@ -39,15 +42,25 @@
   #pad .side{display:flex;gap:calc(var(--s)*5);pointer-events:auto}
   .big{width:calc(var(--s)*30);height:calc(var(--s)*30);border-radius:50%;display:flex;align-items:center;justify-content:center;
     background:rgba(20,28,44,.6);border:1px solid #33456a;font-size:calc(var(--s)*11);color:#cfd8ea;
-    touch-action:none;-webkit-user-select:none;user-select:none;pointer-events:auto}
-  .big:active{background:rgba(50,70,110,.85)}
+    touch-action:none;-webkit-user-select:none;user-select:none;pointer-events:auto;position:relative}
+  .big:active,.big.down{background:rgba(50,70,110,.85);border-color:#6b8fc8}
   #eBtn{width:calc(var(--s)*36);height:calc(var(--s)*36);font-size:calc(var(--s)*9)}
+  /* 全屏透明盾：所有触摸都落在它身上（它没有文字，长按不会触发选区菜单） */
+  #shield{position:absolute;inset:0;z-index:10;background:transparent;
+    -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:none}
+  /* HUD 按钮要浮在盾之上才能点 */
+  #top{position:absolute;z-index:30;pointer-events:none}
+  #top .speedbar,#top .speedbar *{pointer-events:auto}
+  #pad{position:absolute;z-index:6;pointer-events:none}
+  #pad .big{pointer-events:none}
+  #obj{position:absolute;z-index:7}
+  #panelWrap{z-index:60}
   .pulse{animation:btnPulse 1.05s ease-in-out infinite}
   @keyframes btnPulse{
     0%,100%{box-shadow:0 0 0 0 rgba(255,216,107,0);border-color:#33456a}
     50%{box-shadow:0 0 0 calc(var(--s)*2.4) rgba(255,216,107,.5);border-color:#ffd86b;color:#fff}
   }
-  .tip{position:fixed;transform:translate(-50%,-100%);pointer-events:none;display:none;z-index:120;
+  .tip{position:fixed;transform:translate(-50%,-100%);pointer-events:none;display:none;z-index:10;
     background:rgba(10,20,38,.94);border:1px solid #3d6fae;border-radius:calc(var(--s,1px)*2);
     padding:calc(var(--s,1px)*1.6) calc(var(--s,1px)*3.2);font-size:calc(var(--s,1px)*7);color:#dbe7f7;
     white-space:nowrap;text-shadow:0 1px 0 #000;box-shadow:0 0 calc(var(--s,1px)*4) rgba(0,0,0,.8)}
@@ -126,6 +139,8 @@
       </div>
     </div>
 
+    <div id="shield"></div>
+
     <div class="tip" id="tip"></div>
 
     <div id="panelWrap"><div id="panel"></div></div>
@@ -187,10 +202,9 @@ function layout(){
   var w=window.innerWidth, h=window.innerHeight;
   var portrait = h>w;
   var W,H;
-  if(portrait){
-    // 竖屏：把整个游戏容器旋转 90° 铺满，无需用户开自动旋转
-    H = w;                       // 旋转后可见高度 = 屏宽
-    W = Math.min(h, H*16/9);     // 旋转后可见宽度 = 屏高
+  if(portrait && !forceLandscape){
+    H = w;
+    W = Math.min(h, H*16/9);
     gameEl.classList.add('rotated');
     gameEl.style.width=Math.floor(W)+'px';
     gameEl.style.height=Math.floor(H)+'px';
@@ -207,6 +221,36 @@ function layout(){
   var rot=$('rotate');
   if(rot) rot.classList.remove('show');
   if(G) G.paused=false;
+}
+
+// ============================== 强制横屏 ==============================
+var forceLandscape=false;
+function isPortrait(){ return window.innerHeight>window.innerWidth; }
+function goLandscape(){
+  var el=document.documentElement;
+  var p=[];
+  try{
+    if(el.requestFullscreen) p.push(el.requestFullscreen());
+    else if(el.webkitRequestFullscreen) p.push(el.webkitRequestFullscreen());
+    else if(el.webkitRequestFullScreen) p.push(el.webkitRequestFullScreen());
+  }catch(e){}
+  var lock=function(){
+    try{
+      if(screen.orientation && screen.orientation.lock){
+        var r=screen.orientation.lock('landscape');
+        if(r && r.catch) r.catch(function(){});
+      }
+    }catch(e){}
+  };
+  if(p.length && p[0] && p[0].then){
+    p[0].then(function(){ lock(); setTimeout(layout,150); setTimeout(layout,500); })
+        .catch(function(){ lock(); setTimeout(layout,200); });
+  } else {
+    lock();
+    setTimeout(layout,200);
+  }
+  forceLandscape=false;
+  setTimeout(layout,300);
 }
 window.addEventListener('resize',layout);
 window.addEventListener('orientationchange',function(){setTimeout(layout,120);});
@@ -454,7 +498,12 @@ function handleAct(act){
   if(a==='skipTut'){ tutActive=false; lastObj=''; closePanel(); syncObjective(); return; }
   if(a==='settleGo'){ closePanel(); newDay(); return; }
   if(a==='restart'){ closePanel(); reset(); G.started=true; return; }
-  if(a==='startGame'){ closePanel(); G.started=true; return; }
+  if(a==='startGame'){
+    closePanel();
+    G.started=true;
+    try{ goLandscape(); }catch(e){}
+    return;
+  }
 }
 
 function bySlot(i){ return slots[i]?slots[i].st:null; }
@@ -864,13 +913,24 @@ function gameOver(reason){
 }
 
 // ============================== 输入 ==============================
-// 禁掉长按选中 / 长按菜单 / 拖拽，但**不动 touchend**（会干扰点击）
+// 禁掉长按选中 / 长按菜单 / 拖拽 / 双击缩放
 (function(){
   var block=function(e){ e.preventDefault(); return false; };
-  document.addEventListener('selectstart', block, {passive:false});
-  document.addEventListener('contextmenu', block, {passive:false});
-  document.addEventListener('dragstart', block, {passive:false});
-  document.addEventListener('gesturestart', block, {passive:false});
+  ['selectstart','contextmenu','dragstart','gesturestart','touchcallout'].forEach(function(n){
+    document.addEventListener(n, block, {passive:false});
+  });
+  // 长按选中：持续拦截 selectionchange
+  document.addEventListener('selectionchange', function(){
+    try{ var s=window.getSelection(); if(s && s.rangeCount) s.removeAllRanges(); }catch(e){}
+  });
+  // 长按（>450ms）也拦一次
+  var pressTimer=null;
+  document.addEventListener('touchstart', function(e){
+    pressTimer=setTimeout(function(){
+      try{ var s=window.getSelection(); if(s) s.removeAllRanges(); }catch(err){}
+    }, 420);
+  }, {passive:true});
+  document.addEventListener('touchend', function(){ if(pressTimer) clearTimeout(pressTimer); }, {passive:true});
 })();
 
 function setKey(k,v){ if(k in keys) keys[k]=v; }
@@ -903,21 +963,27 @@ function hitTest(cx,cy){
   }
   return null;
 }
+function setBtnDown(id,on){
+  var el=$(id);
+  if(el){ el.classList.toggle('down', !!on); }
+}
 function pressStart(cx,cy){
   if(menuOpen) return null;
   var hit=hitTest(cx,cy);
   if(!hit) return null;
-  if(hit==='leftBtn'){ touchState.left=true; setKey('left',true); }
-  else if(hit==='rightBtn'){ touchState.right=true; setKey('right',true); }
-  else if(hit==='eBtn'){ doInteract(); }
+  if(hit==='leftBtn'){ touchState.left=true; setKey('left',true); setBtnDown('leftBtn',true); }
+  else if(hit==='rightBtn'){ touchState.right=true; setKey('right',true); setBtnDown('rightBtn',true); }
+  else if(hit==='eBtn'){ setBtnDown('eBtn',true); doInteract(); }
   return hit;
 }
 function pressEnd(){
-  if(touchState.left){ touchState.left=false; setKey('left',false); }
-  if(touchState.right){ touchState.right=false; setKey('right',false); }
+  if(touchState.left){ touchState.left=false; setKey('left',false); setBtnDown('leftBtn',false); }
+  if(touchState.right){ touchState.right=false; setKey('right',false); setBtnDown('rightBtn',false); }
+  setBtnDown('eBtn',false);
 }
 function installTouch(){
-  var activeIds={};
+  var shield=$('shield');
+  var target=shield||document;
   function onDown(e){
     var t=e.touches?e.touches[0]:e;
     if(!t) return;
@@ -925,38 +991,38 @@ function installTouch(){
     var hit=hitTest(t.clientX,t.clientY);
     if(!hit) return;
     if(e.cancelable) e.preventDefault();
-    activeIds[e.pointerId!=null?e.pointerId:(t.identifier||0)]=true;
+    e.stopPropagation();
     pressStart(t.clientX,t.clientY);
   }
   function onMove(e){
     var t=e.touches?e.touches[0]:e;
     if(!t) return;
     if(touchState.left||touchState.right){
-      if(!hitTest(t.clientX,t.clientY)) pressEnd();
+      var hit=hitTest(t.clientX,t.clientY);
+      if(!hit||hit==='eBtn') pressEnd();
     }
+    if(e.cancelable && (touchState.left||touchState.right)) e.preventDefault();
   }
   function onUp(e){
     if(e.cancelable) e.preventDefault();
-    activeIds={};
     pressEnd();
   }
-  if(window.PointerEvent){
-    document.addEventListener('pointerdown',onDown,{passive:false});
-    document.addEventListener('pointermove',onMove,{passive:false});
-    document.addEventListener('pointerup',onUp,{passive:false});
-    document.addEventListener('pointercancel',onUp,{passive:false});
-  } else {
-    document.addEventListener('touchstart',onDown,{passive:false});
-    document.addEventListener('touchmove',onMove,{passive:false});
-    document.addEventListener('touchend',onUp,{passive:false});
-    document.addEventListener('touchcancel',onUp,{passive:false});
-  }
-  // 鼠标兜底（桌面测试）
-  document.addEventListener('mousedown',function(e){
+  target.addEventListener('pointerdown',onDown,{passive:false});
+  target.addEventListener('pointermove',onMove,{passive:false});
+  target.addEventListener('pointerup',onUp,{passive:false});
+  target.addEventListener('pointercancel',onUp,{passive:false});
+  target.addEventListener('pointerleave',onUp,{passive:false});
+  // 触屏兜底
+  target.addEventListener('touchstart',onDown,{passive:false});
+  target.addEventListener('touchmove',onMove,{passive:false});
+  target.addEventListener('touchend',onUp,{passive:false});
+  target.addEventListener('touchcancel',onUp,{passive:false});
+  // 鼠标兜底（桌面）
+  target.addEventListener('mousedown',function(e){
     if(menuOpen) return;
     if(pressStart(e.clientX,e.clientY)) e.preventDefault();
   },{passive:false});
-  document.addEventListener('mouseup',pressEnd);
+  target.addEventListener('mouseup',function(e){ e.preventDefault(); pressEnd(); },{passive:false});
 }
 
 function setSpeed(s){
