@@ -280,7 +280,7 @@ var NPCS=[
   {id:'chen',name:'老陈',role:'战斗',color:'#5f7a5a',day:8,
    ability:'全体战斗人员伤害 +25%',task:'累计击杀 60 名敌人'},
   {id:'mei', name:'梅姐',role:'金融',color:'#b8486e',pawnLv:2,
-   ability:'小金库利息 ×3',task:'还清贷款且存款达 30000'},
+   ability:'小金库利息 ×2 · 分段计息再叠加',task:'还清贷款且存款达 30000'},
   {id:'ni',  name:'阿霓',role:'防御',color:'#4fc6c0',need:'cyber',rev:8000,
    ability:'炮塔射程 +30% · 摄像头覆盖 +50%',task:'累计营业额达 20000'},
   {id:'yu',  name:'小雨',role:'经营',color:'#7ec8e8',need:'med',needLv:2,
@@ -369,6 +369,53 @@ var LV=[
   {power:52, shops:16, defs:15, fighters:16, rev:140000, pres:400}
 ];
 var HOME_UP_COST=[0,900,1800,3200,5200,8000,12000,18000];
+
+// ============================== 金库分段计息 ==============================
+// 累进（边际）计息：每一段钱按各自的日利率生息，存得越多整体利率越高，
+// 但跨档时不会出现“多存 1 块利息暴涨”的断层。
+// 单日利息 = Σ 各段金额 × 该段日利率，最高边际 4%/天（低于贷款 5%/天，借钱来存不划算）。
+var VAULT_TIERS=[
+  {up:2000,     rate:0.020},   // 0 ~ 2,000        2.0%
+  {up:10000,    rate:0.025},   // 2,000 ~ 1 万     2.5%
+  {up:30000,    rate:0.030},   // 1 万 ~ 3 万      3.0%
+  {up:100000,   rate:0.035},   // 3 万 ~ 10 万     3.5%
+  {up:Infinity, rate:0.040}    // 10 万以上        4.0%
+];
+// 梅姐的加成只作用于 3 万以内的部分：否则「借钱→存钱」在后期能白嫖利差
+var VAULT_BONUS_CAP=30000;
+function vaultMeiMul(){ return hasNpc('mei')?2:1; }
+// 单日利息（含梅姐加成）。v = 金库余额
+function vaultInterest(v){
+  if(!(v>0)) return 0;
+  var m=vaultMeiMul(), lo=0, sum=0;
+  for(var i=0;i<VAULT_TIERS.length;i++){
+    if(v<=lo) break;
+    var hi=VAULT_TIERS[i].up;
+    var bonus=(lo<VAULT_BONUS_CAP)?m:1;
+    sum+=(Math.min(v,hi)-lo)*VAULT_TIERS[i].rate*bonus;
+    lo=hi;
+  }
+  return sum;
+}
+// 钱现在所处的档位利率（边际利率，未含梅姐加成时用得上）
+function vaultRateAt(v){
+  for(var i=0;i<VAULT_TIERS.length;i++) if(v<=VAULT_TIERS[i].up) return VAULT_TIERS[i].rate;
+  return VAULT_TIERS[VAULT_TIERS.length-1].rate;
+}
+// 综合利率 = 总利息 / 总存款，用来显示“日息 X%”
+function vaultEffRate(v){
+  if(!(v>0)) return VAULT_TIERS[0].rate*vaultMeiMul();
+  return vaultInterest(v)/v;
+}
+// 下一档还差多少（at = 跨档门槛，rate = 跨过去后新增那部分的利率，已含加成）
+function vaultNextTier(v){
+  for(var i=0;i<VAULT_TIERS.length-1;i++){
+    var hi=VAULT_TIERS[i].up;
+    if(v<hi) return {need:Math.ceil(hi-v), at:hi, rate:VAULT_TIERS[i+1].rate*((hi<VAULT_BONUS_CAP)?vaultMeiMul():1)};
+  }
+  return null;
+}
+function pctStr(r){ return (r*100).toFixed(1)+'%'; }
 
 // ============================== DOM ==============================
 var $=function(id){return document.getElementById(id);};
@@ -1167,7 +1214,11 @@ function homeMenu(){
   var cost=up?HOME_UP_COST[G.homeLevel]:0;
   var canUp = up && G.totalRevenue>=need.rev && G.prestige>=need.pres && G.purse>=cost;
   var h='<h3>家 · Lv'+G.homeLevel+'</h3>';
-  h+='<div class="txt">金库 '+Math.floor(G.vault)+'（利息 2%/天） · 随身 '+Math.floor(G.purse)+'<br>电力 '+G.powerCap+' kW · 商店 '+countShops()+'/'+capShops()+' · 防御 '+countDefs()+'/'+capDefs()+' · 保安 '+G.fighters.length+'/'+capFighters()+'</div>';
+  var vv=G.vault, vnx=vaultNextTier(vv), vMei=hasNpc('mei');
+  h+='<div class="txt">金库 '+Math.floor(vv)+'（日息 '+pctStr(vaultEffRate(vv))+' ≈ +'+Math.floor(vaultInterest(vv))+'/天'+(vMei?' · 梅姐 ×2':'')+'） · 随身 '+Math.floor(G.purse)+'<br>'+
+     (vnx?'<span style="color:#8fd3ff">再存 '+money(vnx.need)+' → 超出部分日息 '+pctStr(vnx.rate)+'</span><br>'
+         :'<span style="color:#8fd3ff">已在最高档 · 超出部分 4.0%'+(vMei?'（梅姐加成只到 3 万）':'')+'</span><br>')+
+     '电力 '+G.powerCap+' kW · 商店 '+countShops()+'/'+capShops()+' · 防御 '+countDefs()+'/'+capDefs()+' · 保安 '+G.fighters.length+'/'+capFighters()+'</div>';
   if(up){
     var sub2='营业额 '+Math.floor(G.totalRevenue)+'/'+need.rev+' · 威望 '+Math.floor(G.prestige)+'/'+need.pres+' · 电力 +'+(LV[G.homeLevel].power-G.powerCap)+'kW';
     h+=row('⬆ 升级家 → Lv'+(G.homeLevel+1), sub2, (canUp?'<span style="color:#7ff0c4">可升级</span> ':'')+money(cost), !canUp, 'homeUp');
@@ -2404,17 +2455,18 @@ function endNight(homeLost){
   auBgm('off'); sfx(homeLost?'hurt':'win');
   G.enemies.length=0; G.projs.length=0;
   var salary=G.staff*60+G.fighters.length*40;
-  var interest=Math.floor(G.vault*0.02*(hasNpc('mei')?3:1));
+  var vRate=vaultEffRate(G.vault);
+  var interest=Math.floor(vaultInterest(G.vault));
   var pre=0;
   if(!homeLost) pre+=10+2*waveCount();
   if(G.dayRevenue>=G.dayTarget) pre+=8;
-  G.settle={salary:salary, interest:interest, pre:pre, homeLost:!!homeLost, rev:G.dayRevenue, target:G.dayTarget, destroyed:G.nightDestroyed};
+  G.settle={salary:salary, interest:interest, rate:vRate, pre:pre, homeLost:!!homeLost, rev:G.dayRevenue, target:G.dayTarget, destroyed:G.nightDestroyed};
   G.purse-=salary; if(G.purse<0) G.purse=0;
   G.vault+=interest;
   prestige(pre);
   if(G.over) return;
   var h='<h3>'+(homeLost?'家被攻破了':'第 '+G.day+' 天 · 结算')+'</h3>';
-  h+='<div class="txt">今日营业额 '+G.dayRevenue+' / 目标 '+G.dayTarget+'<br>工资 -'+salary+' · 金库利息 +'+interest+'<br>声望 +'+pre+(G.nightDestroyed?' · 被毁建筑 '+G.nightDestroyed:'')+'</div>';
+  h+='<div class="txt">今日营业额 '+G.dayRevenue+' / 目标 '+G.dayTarget+'<br>工资 -'+salary+' · 金库利息 +'+interest+'（'+pctStr(G.settle.rate||0)+'/天）<br>声望 +'+pre+(G.nightDestroyed?' · 被毁建筑 '+G.nightDestroyed:'')+'</div>';
   if(homeLost) h+='<div class="txt" style="color:#ff6b6b">小金库损失 40%，家降 1 级，威望 -40。<br>明天白天延长到 260 秒，好好恢复。</div>';
   h+='<div class="txt" style="color:#5c6b85;font-size:0.92em;margin-top:2px">'+settleLine()+'</div>';
   h+='<div class="foot"><button class="btn" data-act="settleGo">继续</button></div>';
@@ -2834,7 +2886,7 @@ function objectiveText(){
   if(G.phase==='night'){
     if(G.homeHP<G.homeMax*0.4) return '<span class="step">夜</span> 家快撑不住了！跑回去守住';
     if(G.enemies.length>0) return '<span class="step">夜</span> 敌人在砸店 · 跑过去抢修，别站着看';
-    return '<span class="step">夜</span> 守住这 150 秒 · 夜里不能加速';
+    return '<span class="step">夜</span> 守住这 150 秒 · 顶部 <b>2×/4×</b> 也能加速';
   }
   if(G.phase==='dusk') return '<span class="step">黄昏</span> 确认电力分配，点「跳过」立刻入夜';
   if(G.order) return '<span class="step">建造</span> 走到街上<span style="color:#8fd3ff">闪烁的空位</span>，按 E 放置';
@@ -2872,7 +2924,7 @@ function helpPanel(){
   h+='<div class="txt"><b>1. 建造</b><br>走到左边<b>五金店</b>按 E → 选商店或防御（付钱下单）→ 走到街上<b>闪烁的空位</b>按 E → 五金店派施工队来建。<br>商店 25 秒，防御 10 秒。施工中工地会被砸。</div>';
   h+='<div class="txt"><b>2. 收钱</b><br>商店卖出的钱记在<b>店头</b>（屋顶有金额牌），<b>走近就自动收进钱包</b>，不用捡。</div>';
   h+='<div class="txt"><b>3. 补货</b><br>每家店每天有固定库存，卖光后屋顶冒<span style="color:#ff6b6b">红色感叹号</span>、停止赚钱。走过去按 E 触发补货（5～12 秒补满）。</div>';
-  h+='<div class="txt"><b>4. 家</b><br>走到中间的<b>家</b>按 E：<br>· <b>升级家</b>（菜单第一行：电力、商店/防御/保安上限）<br>· 存钱/取钱（金库利息 2%/天，被攻破损失 40%）<br>· 布防（设置每人守左 / 守右 / 自动）<br>· 招募保安（近战 / 远程 / 机器人）<br>· 店员要在<b>对应的店里</b>按 E 招募，家里招不了</div>';
+  h+='<div class="txt"><b>4. 家</b><br>走到中间的<b>家</b>按 E：<br>· <b>升级家</b>（菜单第一行：电力、商店/防御/保安上限）<br>· 存钱/取钱（金库<b>分段计息</b>：存得越多利率越高，2.0% → 2.5% → 3.0% → 3.5% → 4.0%/天；被攻破损失 40%）<br>· 布防（设置每人守左 / 守右 / 自动）<br>· 招募保安（近战 / 远程 / 机器人）<br>· 店员要在<b>对应的店里</b>按 E 招募，家里招不了</div>';
   h+='<div class="txt"><b>4.5 特殊 NPC</b><br>横栏上的<b>「招募 · …」</b>会轮播下一位 NPC 的<b>招募条件与进度</b>，点它可以看全部八位。条件达成后街上会出现这个人，走过去按 E 让他入队。</div>';
   h+='<div class="txt"><b>5. 电力</b><br>每天固定额度，<b>06:00 重置</b>。所有商店和防御都吃电，员工和保安不吃。超了会自动断掉后建的建筑（地下电缆会变红）。升级家 = 更多电力。</div>';
   h+='<div class="txt"><b>6. 夜晚</b><br>敌人从街两端进来砸店。<b>你只能跑</b>：<br>· 保安会迎上去和敌人互殴，敌人被贴身就停下对打<br>· 站到某段附近，那段保安伤害 +20%<br>· 敌人碰你会抢走随身现金<br>· 家被砸 → 金库 -40%、降 1 级、当晚结束、次日白天 260 秒</div>';
@@ -5306,7 +5358,8 @@ window.__DBG__={
   get slot(){return curSlot;}, setSlot:function(i){ curSlot=i; },
   get audio(){return {bgm:AU.bgm,sfx:AU.sfx,mode:AU.mode,started:!!AU.ctx};},
   get music(){return {mode:AU.mode,cur:curTrack,samples:Object.keys(SFX_BUF).length,loaded:Object.keys(MUSIC_BUF),loading:Object.keys(MUSIC_LOADING).filter(function(k){return MUSIC_LOADING[k];})};},
-  auSetBgm:auSetBgm, auSetSfx:auSetSfx
+  auSetBgm:auSetBgm, auSetSfx:auSetSfx,
+  vaultInterest:vaultInterest, vaultEffRate:vaultEffRate, vaultNextTier:vaultNextTier, get VAULT_TIERS(){return VAULT_TIERS;}
 };
 })();
 </script>
