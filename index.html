@@ -259,6 +259,8 @@ var DEFS={
   zapdoor:  {name:'电击门', cost:380, power:3, hp:90,  day:15},
   turret:   {name:'炮塔',   cost:450, power:3, hp:130, day:8}
 };
+// 防御设施的视觉高度（提示气泡 / 交互定位用，必须与 drawDef 保持一致）
+var DEF_H={barricade:26, spike:15, camera:50, zapdoor:38, turret:32};
 // 敌人表：day = 最早出现天数
 var ENEMY={
   thief:  {name:'小偷',       hp:20,  dmg:4,  speed:22, drop:1, day:1,  val:1},
@@ -1250,6 +1252,44 @@ function shopMenu(st){
   openPanel(h);
 }
 
+function defUpCost(st){
+  var base=Math.floor(DEFS[st.kind].cost*1.2*st.level);
+  return Math.max(1,Math.floor(base*(hasNpc('zhou')?0.6:1)));
+}
+function defRepCost(st){
+  var pct=clamp(st.hp/st.maxHp,0,1);
+  return Math.max(0,Math.ceil((1-pct)*DEFS[st.kind].cost*0.6));
+}
+function defMenu(st){
+  var c=DEFS[st.kind];
+  var h='<h3>'+c.name+' · Lv'+st.level+'</h3>';
+  if(st.state==='ruin'){
+    h+='<div class="txt">已被打坏，只剩废墟。可在五金店重新下单，或直接清理。</div>';
+    h+=row('清理废墟','返还一点材料','',false,'raze:'+st.slot);
+    h+=foot(); openPanel(h); return;
+  }
+  if(st.state==='building'){
+    h+='<div class="txt">施工中… 还需 '+Math.ceil(st.buildT)+'s<br>施工期间可能被破坏。</div>'+foot(); openPanel(h); return;
+  }
+  var pct=clamp(st.hp/st.maxHp,0,1);
+  h+='<div class="txt">耐久 '+Math.ceil(st.hp)+'/'+st.maxHp+' · '+c.power+'kW'+
+     (st.off?' · <span style="color:#ff6b6b">电力不足，已停用</span>':'')+'<br>'+
+     (st.kind==='barricade'?'挡住敌人，替你挨打':
+      st.kind==='spike'?'踩上去持续掉血':
+      st.kind==='camera'?'夜间照亮附近 · 提升炮塔射程':
+      st.kind==='zapdoor'?'敌人穿过时持续电击':
+      '自动索敌开火')+'</div>';
+  var rep=defRepCost(st);
+  h+=row('维修','补满耐久','💰'+rep,pct>=1||G.purse<rep,'defRepair:'+st.slot);
+  var up=defUpCost(st);
+  h+=row('升级 → Lv'+(st.level+1),
+    st.level<3?('耐久 +40%'+(st.kind==='turret'||st.kind==='spike'||st.kind==='zapdoor'?' · 伤害/射程 +'+(st.kind==='turret'?'30%':'50%'):'')+(hasNpc('zhou')?' · 老周 -40%':'')):'已满级',
+    money(up), st.level>=3||G.purse<up, 'defUpgrade:'+st.slot);
+  h+=row('拆除','返还 50%','',false,'demolish:'+st.slot);
+  h+=foot();
+  openPanel(h);
+}
+
 function handleAct(act){
   var p=act.split(':'), a=p[0], v=p[1];
   if(a==='vaultIn100'){ if(G.purse>=100){G.purse-=100;G.vault+=100;} closePanel(); homeMenu(); return; }
@@ -1296,6 +1336,7 @@ function handleAct(act){
   }
   if(a==='order'){
     var kind=v, c=CFG[kind];
+    if(!c){ closePanel(); hardwareMenu(); return; }   // 未知类型直接忽略
     if(c.day&&c.day>G.day){ closePanel(); hardwareMenu(); return; }
     var dis = G.purse<c.cost || (isShop(kind)?countShops()>=capShops():countDefs()>=capDefs());
     if(!dis){ G.purse-=c.cost; G.order={kind:kind,cost:c.cost}; syncHUD(); }
@@ -1310,6 +1351,25 @@ function handleAct(act){
       if(spend(cc)){ st2.level++; st2.maxStock=Math.floor(CFG[st2.kind].stock*(1+0.25*(st2.level-1))); st2.hp=st2.maxHp; prestige(8); }
     }
     closePanel(); if(st2)shopMenu(st2); return;
+  }
+  if(a==='defRepair'){
+    var s8=bySlot(+v);
+    if(s8&&s8.state==='ok'){
+      var rc=defRepCost(s8);
+      if(rc>0&&spend(rc)){ s8.hp=s8.maxHp; sfx('build'); addParts(s8.x,GY-18,6,'#7ff0c4'); }
+    }
+    closePanel(); if(s8)defMenu(s8); return;
+  }
+  if(a==='defUpgrade'){
+    var s9=bySlot(+v);
+    if(s9&&s9.state==='ok'&&s9.level<3){
+      var uc2=defUpCost(s9);
+      if(spend(uc2)){
+        s9.level++; s9.maxHp=Math.round(s9.maxHp*1.4); s9.hp=s9.maxHp;
+        prestige(6); sfx('upgrade'); addParts(s9.x,GY-24,8,'#7ff0c4');
+      }
+    }
+    closePanel(); if(s9)defMenu(s9); return;
   }
   if(a==='demolish'){
     var st3=bySlot(+v);
@@ -1497,7 +1557,8 @@ function npcDialogOnStreet(item){
 function joinNpc(id){
   var n=NPCS_BY_ID[id];
   if(!n||hasNpc(id)) return;
-  G.joined[id]=true;
+  if(id==='zhou') G.zhouJoined=true;      // 老周用的是独立标志位
+  else G.joined[id]=true;
   var arr=[];
   for(var i=0;i<G.street.length;i++) if(G.street[i].id!==id) arr.push(G.street[i]);
   G.street=arr;
@@ -1793,10 +1854,12 @@ function dmgMul(type){
   return m;
 }
 function camBoost(st){
-  var r=64*(hasNpc('ni')?1.5:1);
+  var ni=hasNpc('ni')?1.5:1;
   for(var i=0;i<slots.length;i++){
     var o=slots[i].st;
-    if(o&&o.state==='ok'&&o.kind==='camera'&&!o.off&&Math.abs(o.x-st.x)<r) return 1.4;
+    if(!o||o.state!=='ok'||o.kind!=='camera'||o.off) continue;
+    var r=(64+(o.level-1)*16)*ni;
+    if(Math.abs(o.x-st.x)<r) return 1.4;
   }
   return 1;
 }
@@ -1846,7 +1909,7 @@ function nearestInteract(){
   if(doorState()>0) cand(DOOR_X,{t:'door'},16);
   for(var i=0;i<slots.length;i++){
     var s=slots[i];
-    if(s.st) cand(s.x,{t:'shop',st:s.st},20);
+    if(s.st) cand(s.x,{t:(isShop(s.st.kind)?'shop':'def'),st:s.st},20);
     else if(G.order) cand(s.x,{t:'slot',slot:s},18);
   }
   return best;
@@ -1863,6 +1926,7 @@ function doInteract(){
   if(it.t==='home'){ homeMenu(); return; }
   if(it.t==='hardware'){ hardwareMenu(); return; }
   if(it.t==='shop'){ shopMenu(it.st); return; }
+  if(it.t==='def'){ defMenu(it.st); return; }
   if(it.t==='slot'){ placeOrder(it.slot); return; }
 }
 
@@ -2248,19 +2312,48 @@ function updateTurrets(dt){
   for(var i=0;i<slots.length;i++){
     var st=slots[i].st;
     if(!st||st.state!=='ok'||st.kind!=='turret'||st.off) continue;
+    var lvB=1+0.3*(st.level-1);
     var target=null, bd=1e9;
     for(var j=0;j<G.enemies.length;j++){
       var e=G.enemies[j], d=Math.abs(e.x-st.x);
       if(d<bd){ bd=d; target=e; }
     }
-    if(target && bd<76*(hasNpc('ni')?1.3:1)*camBoost(st)){
+    if(target && bd<76*lvB*(hasNpc('ni')?1.3:1)*camBoost(st)){
       st.angle=Math.atan2(0, target.x-st.x);
       st.atkCd-=dt;
       if(st.atkCd<=0){
-        st.atkCd=0.8;
+        st.atkCd=0.8-(st.level-1)*0.1;
         var dir=target.x>st.x?1:-1;
-        G.projs.push({x:st.x, y:GY-26, vx:dir*300, dmg:6, life:1.0, from:'t'});
+        G.projs.push({x:st.x, y:GY-26, vx:dir*300, dmg:6*lvB, life:1.0, from:'t'});
       }
+    }
+  }
+}
+
+// 地刺 / 电击门：贴上去持续掉血（之前只有美术、没有伤害）
+function updateTraps(dt){
+  for(var i=0;i<slots.length;i++){
+    var st=slots[i].st;
+    if(!st||st.state!=='ok'||st.off) continue;
+    if(st.kind!=='spike'&&st.kind!=='zapdoor') continue;
+    var r=st.kind==='spike'?11:19;
+    var dps=(st.kind==='spike'?5:9)*(1+0.5*(st.level-1));
+    st.atkCd=(st.atkCd||0)-dt;
+    var hitAny=false;
+    for(var j=0;j<G.enemies.length;j++){
+      var e=G.enemies[j];
+      if(Math.abs(e.x-st.x)>r) continue;
+      e.hp-=dps*dt;
+      hitAny=true;
+      if(!e._trapFx||G.tick-e._trapFx>0.45){
+        e._trapFx=G.tick;
+        addParts(e.x+rr(-3,3),GY-6,2,st.kind==='spike'?'#ff8f5a':'#7bfff0');
+      }
+    }
+    if(hitAny&&st.atkCd<=0){
+      st.atkCd=st.kind==='spike'?0.5:0.35;
+      if(st.kind==='zapdoor') glow(st.x,GY-27,20,'#7bfff0',0.2);
+      if(!G._zapSfx||G.tick-G._zapSfx>0.28){ G._zapSfx=G.tick; sfx('hit'); }
     }
   }
 }
@@ -4550,12 +4643,13 @@ function drawPrompt(){
   else if(it.t==='zhou') x=-36;
   else if(it.t==='xiao') x=G.xiao.x;
   else if(it.t==='door') x=DOOR_X;
-  else if(it.t==='shop') x=it.st.x;
+  else if(it.t==='shop'||it.t==='def') x=it.st.x;
   else if(it.t==='slot') x=it.slot.x;
   var y=GY-44;
   if(it.t==='home'){ y=Math.max(40,GY-(84+(G.homeLevel>3?8:0)+(G.homeLevel>5?8:0))-16); }
   else if(it.t==='hardware'){ y=GY-62-14; }
   else if(it.t==='shop'){ y=GY-(SHOP_ART[it.st.kind].h0+(it.st.level-1)*7)-36; }
+  else if(it.t==='def'){ y=GY-(DEF_H[it.st.kind]||30)-14; }
   else if(it.t==='zhou'){ y=GY-50; }
   else if(it.t==='xiao'){ y=GY-46; }
   else if(it.t==='door'){ y=GY-26; }
@@ -5067,32 +5161,41 @@ function draw(){
 }
 // ============================== 主循环 ==============================
 var last=0;
+var _loopErrs=0;
 function loop(ts){
-  if(!last) last=ts;
-  var dt=(ts-last)/1000; last=ts;
-  if(dt>0.1) dt=0.1;
-  if(!G.paused && !G.userPaused && G.started && !G.over){
-    G.tick+=dt;
-    var sdt=dt*G.speed;
-    updatePlayer(sdt);
-    if(G.phase==='day'||G.phase==='dusk'||G.phase==='night') updateShops(sdt);
-    updateCoins(sdt);
-    if(G.phase==='night'){
-      updateEnemies(dt*G.speed); updateTurrets(dt*G.speed); updateProjs(dt*G.speed);
+  // 单帧异常不能杀死整个循环：rAF 在末尾重新登记，
+  // 一旦 update/draw 抛错就会永久停帧（手机上表现为“直接卡死”）。
+  try{
+    if(!last) last=ts;
+    var dt=(ts-last)/1000; last=ts;
+    if(dt>0.1) dt=0.1;
+    if(!G.paused && !G.userPaused && G.started && !G.over){
+      G.tick+=dt;
+      var sdt=dt*G.speed;
+      updatePlayer(sdt);
+      if(G.phase==='day'||G.phase==='dusk'||G.phase==='night') updateShops(sdt);
+      updateCoins(sdt);
+      if(G.phase==='night'){
+        updateEnemies(dt*G.speed); updateTurrets(dt*G.speed); updateTraps(dt*G.speed); updateProjs(dt*G.speed);
+      }
+      updateFighters(dt*G.speed);
+      if(G.flash>0) G.flash-=dt;
+      for(var i=G.parts.length-1;i>=0;i--){
+        var p=G.parts[i]; p.life-=dt; p.x+=p.vx*dt; p.y+=p.vy*dt; if(!p.nograv) p.vy+=200*dt;
+        if(p.life<=0) G.parts.splice(i,1);
+      }
+      updatePhase(dt);
+      updateTutorial();
+      syncObjective();
+      checkNpcTasks();
+      storyCheck();
     }
-    updateFighters(dt*G.speed);
-    if(G.flash>0) G.flash-=dt;
-    for(var i=G.parts.length-1;i>=0;i--){
-      var p=G.parts[i]; p.life-=dt; p.x+=p.vx*dt; p.y+=p.vy*dt; if(!p.nograv) p.vy+=200*dt;
-      if(p.life<=0) G.parts.splice(i,1);
-    }
-    updatePhase(dt);
-    updateTutorial();
-    syncObjective();
-    checkNpcTasks();
-    storyCheck();
+    if(!window.__NODRAW__) draw();
+  }catch(err){
+    _loopErrs++;
+    window.__LASTERR__=String((err&&err.message)||err);
+    if(_loopErrs<=3){ try{ console.error('[zero-neon] frame error:',err); }catch(e2){} }
   }
-  if(!window.__NODRAW__) draw();
   requestAnimationFrame(loop);
 }
 
@@ -5155,9 +5258,36 @@ try{ Object.defineProperty(window,'__GAME__',{get:function(){return G;},configur
 catch(e){ window.__GAME__=G; }
 window.__SHOP__=SHOPS;
 window.__SHOP_ART__=SHOP_ART;
+// ============================== 原生壳（Android）桥 ==============================
+// 安卓 WebView 通过这三个钩子驱动：返回键、切后台、回前台
+window.__NATIVE__={
+  back:function(){
+    try{
+      if(menuOpen){ closePanel(); return true; }          // 先关面板
+      if(G && G.started && !G.over){ mainMenu(); return true; }  // 再回菜单
+    }catch(e){}
+    return false;                                          // 交给系统（双击退出）
+  },
+  pause:function(){
+    try{
+      if(!G || !G.started || G.over) return;
+      window.__NP_PREV__=!!G.userPaused;
+      G.userPaused=true;
+      if(G.phase!=='night' && curSlot!==null && curSlot!==undefined) writeSlot(curSlot);
+    }catch(e){}
+  },
+  resume:function(){
+    try{
+      if(!G || !G.started || G.over) return;
+      if(!window.__NP_PREV__) G.userPaused=false;
+    }catch(e){}
+  }
+};
+
 window.__DBG__={
   get G(){return G;}, get slots(){return slots;}, get menuOpen(){return menuOpen;},
   doInteract:doInteract, placeOrder:placeOrder, handleAct:handleAct, homeMenu:homeMenu,
+  loop:function(ts){ loop(ts); },   // 供自动化测试逐帧驱动
   hardwareMenu:hardwareMenu, shopMenu:shopMenu, zhouDialog:zhouDialog,
   startNight:startNight, spawnWave:spawnWave, endNight:endNight, newDay:newDay,
   destroyHome:destroyHome, recomputePower:recomputePower, addFighter:addFighter,
